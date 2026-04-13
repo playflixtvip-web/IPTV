@@ -3,186 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="no-referrer">
-    <title>Stream VOD Elite Pro</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    
+    <title>Stream VOD - BYPASS MODE</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        :root { --primary: #e50914; --bg: #050505; --surface: #121212; --text: #ffffff; --radius: 12px; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding-bottom: 50px; }
-
-        /* Player Fixo */
-        #player-section { display: none; position: sticky; top: 0; z-index: 5000; background: #000; }
-        video { width: 100%; aspect-ratio: 16/9; display: block; }
-        .close-player { background: var(--primary); color: white; text-align: center; padding: 12px; font-weight: 800; cursor: pointer; }
-
-        /* Header e Controles */
-        header { padding: 20px; background: #111; border-bottom: 1px solid #222; }
-        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
-        input { padding: 14px; border-radius: var(--radius); border: 1px solid #333; background: #1a1a1a; color: white; outline: none; }
-        .btn-sync { padding: 14px; background: var(--primary); color: white; border: none; border-radius: var(--radius); font-weight: 800; cursor: pointer; }
-
-        /* Navegação */
-        .main-nav { display: flex; justify-content: center; gap: 30px; margin: 10px 0; }
-        .nav-item { font-weight: 800; opacity: 0.5; cursor: pointer; padding: 10px; }
-        .nav-item.active { opacity: 1; color: var(--primary); border-bottom: 3px solid var(--primary); }
-        .sub-nav { display: flex; gap: 10px; overflow-x: auto; padding: 15px; scrollbar-width: none; }
-        .pill { background: #222; padding: 8px 18px; border-radius: 20px; white-space: nowrap; font-size: 12px; cursor: pointer; }
-        .pill.active { background: white; color: black; font-weight: bold; }
-
-        /* Grid */
-        .content-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 15px; }
-        .vod-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
-        .vod-card img { width: 100%; height: 160px; object-fit: cover; background: #1a1a1a; }
-        .vod-card .title { padding: 8px; font-size: 10px; text-align: center; font-weight: 600; }
-
-        /* Modal Séries */
-        #series-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 6000; padding: 20px; overflow-y: auto; }
-        .ep-row { padding: 18px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
+        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; text-align: center; }
+        .setup-container { padding: 40px 20px; }
+        input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #111; color: #fff; }
+        .btn { padding: 15px 30px; background: #e50914; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 90%; }
+        #player-box { display: none; position: fixed; inset: 0; z-index: 9999; background: #000; }
+        video { width: 100%; height: 80%; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
+        .card { background: #111; border-radius: 5px; font-size: 10px; padding: 5px; }
+        .card img { width: 100%; height: 120px; object-fit: cover; }
     </style>
 </head>
 <body>
 
-    <div id="player-section">
-        <video id="video" controls autoplay playsinline></video>
-        <div class="close-player" onclick="pararPlayer()">FECHAR PLAYER X</div>
-    </div>
+<div id="setup" class="setup-container">
+    <h2>BYPASS LOADER</h2>
+    <p style="font-size: 12px; color: #888;">Se o link falhar, mude o tipo de saída para <b>&output=ts</b></p>
+    <input type="text" id="m3u" placeholder="Cole seu link M3U aqui..." value="http://bufalov6.shop/get.php?username=17127281&password=SUA_SENHA&type=m3u_plus&output=ts">
+    <button class="btn" onclick="forcarCarga()">FORÇAR ENTRADA (MÉTODO 4)</button>
+    <div id="log" style="font-size: 10px; color: yellow; margin-top: 10px;"></div>
+</div>
 
-    <header>
-        <div class="input-group">
-            <input type="text" id="m3uUrl" placeholder="Link da Lista M3U..." value="http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts">
-            <button class="btn-sync" id="syncBtn" onclick="carregarDados()">SINCRONIZAR LISTA</button>
-            <input type="text" id="search" placeholder="Pesquisar..." oninput="buscaRealTime()">
-        </div>
-    </header>
+<div id="content" style="display:none;">
+    <div id="grid-vod" class="grid"></div>
+</div>
 
-    <div class="main-nav">
-        <div id="tab-filmes" class="nav-item active" onclick="alternar('filmes')">FILMES</div>
-        <div id="tab-series" class="nav-item" onclick="alternar('series')">SÉRIES</div>
-    </div>
+<div id="player-box">
+    <video id="vid" controls></video>
+    <button class="btn" onclick="fechar()">FECHAR CANAL</button>
+</div>
 
-    <div id="pills-container" class="sub-nav"></div>
-    <div id="grid" class="content-grid"></div>
+<script>
+    // Lista de Proxies de reserva caso o servidor mude o bloqueio
+    const gatekeeper = "https://worker-bold-morning-8a5b.playflix-cors.workers.dev/?u=";
 
-    <div id="series-modal">
-        <h2 id="modal-title" style="color:var(--primary)"></h2>
-        <div id="lista-eps"></div>
-        <button onclick="fecharModal()" style="width:100%; padding:15px; background:#333; color:white; border:none; border-radius:10px; margin-top:20px;">VOLTAR</button>
-    </div>
+    async function forcarCarga() {
+        const url = document.getElementById('m3u').value;
+        const log = document.getElementById('log');
+        log.innerText = "Iniciando quebra de handshake...";
 
-    <script>
-        let catalogo = { filmes: {}, series: {} };
-        let modoAtual = 'filmes';
-        let shakaPlayer = null;
-        // PROXY PARA RESOLVER O ERRO DE LIGAÇÃO
-        const PROXY = "https://corsproxy.io/?"; 
+        try {
+            // Tentativa via Cloudflare Worker (Bypass mais forte que AllOrigins)
+            const response = await fetch(gatekeeper + btoa(url));
+            const text = await response.text();
 
-        shaka.polyfill.installAll();
+            if (text.length < 100) throw new Error("Resposta muito curta");
 
-        async function carregarDados() {
-            const url = document.getElementById('m3uUrl').value;
-            const btn = document.getElementById('syncBtn');
-            btn.innerText = "Sincronizando...";
-            
-            try {
-                // Usa o proxy para burlar o bloqueio do navegador
-                const res = await fetch(PROXY + encodeURIComponent(url));
-                const data = await res.text();
-                const regex = /#EXTINF:(?:.*?group-title="([^"]*)")?(?:.*?tvg-logo="([^"]*)")?[^,]*,(.*)\n(http[^\n\r]*)/g;
-                let m;
+            processar(text);
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+            log.innerText = "Conectado!";
+        } catch (e) {
+            log.innerText = "Servidor recusou. Tente abrir o link da lista direto no Chrome antes de usar o APK para 'autorizar' seu IP.";
+            console.error(e);
+        }
+    }
+
+    function processar(data) {
+        const grid = document.getElementById('grid-vod');
+        const linhas = data.split('#EXTINF:');
+        linhas.forEach(l => {
+            if(l.includes('http')) {
+                const nome = l.split(',')[1]?.split('\n')[0] || "Canal";
+                const link = l.split('\n')[1]?.trim();
+                const logo = l.match(/tvg-logo="(.*?)"/)?.[1] || "";
                 
-                catalogo = { filmes: {}, series: {} };
-                while ((m = regex.exec(data)) !== null) {
-                    const [_, grupo, logo, nome, link] = m;
-                    const g = grupo || "Geral";
-                    if (g.toLowerCase().includes('serie')) {
-                        let base = nome.split(/S\d+|T\d+|TEMP|EP/i)[0].trim();
-                        if (!catalogo.series[g]) catalogo.series[g] = {};
-                        if (!catalogo.series[g][base]) catalogo.series[g][base] = { n: base, l: logo, eps: [] };
-                        catalogo.series[g][base].eps.push({ n: nome, u: link });
-                    } else {
-                        if (!catalogo.filmes[g]) catalogo.filmes[g] = [];
-                        catalogo.filmes[g].push({ n: nome, l: logo, u: link });
-                    }
-                }
-                btn.innerText = "LISTA CARREGADA!";
-                alternar('filmes');
-            } catch (e) {
-                alert("Erro de conexão. Tente novamente.");
-                btn.innerText = "SINCRONIZAR LISTA";
-            }
-        }
-
-        function alternar(modo) {
-            modoAtual = modo;
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.getElementById(`tab-${modo}`).classList.add('active');
-            const container = document.getElementById('pills-container');
-            container.innerHTML = "";
-            const grupos = Object.keys(catalogo[modo]);
-            grupos.forEach((grupo, idx) => {
-                const d = document.createElement('div');
-                d.className = `pill ${idx === 0 ? 'active' : ''}`;
-                d.innerText = grupo;
-                d.onclick = () => {
-                    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-                    d.classList.add('active');
-                    renderGrid(catalogo[modo][grupo]);
-                };
-                container.appendChild(d);
-            });
-            if (grupos.length > 0) renderGrid(catalogo[modo][grupos[0]]);
-        }
-
-        function renderGrid(itens) {
-            const grid = document.getElementById('grid');
-            grid.innerHTML = "";
-            const lista = modoAtual === 'series' ? Object.values(itens) : itens;
-            lista.forEach(item => {
                 const div = document.createElement('div');
-                div.className = 'vod-card';
-                div.innerHTML = `<img src="${item.l || ''}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=VOD'"><div class="title">${item.n}</div>`;
-                div.onclick = () => modoAtual === 'series' ? abrirSérie(item) : play(item.u);
+                div.className = 'card';
+                div.innerHTML = `<img src="${logo}"><div>${nome.substring(0,20)}</div>`;
+                div.onclick = () => play(link);
                 grid.appendChild(div);
-            });
-        }
-
-        async function play(url) {
-            const v = document.getElementById('video');
-            document.getElementById('player-section').style.display = 'block';
-            if (shakaPlayer) await shakaPlayer.destroy();
-            shakaPlayer = new shaka.Player(v);
-            try { await shakaPlayer.load(url); } catch (e) { v.src = url; }
-            window.scrollTo({top: 0, behavior: 'smooth'});
-        }
-
-        function pararPlayer() { document.getElementById('video').pause(); document.getElementById('player-section').style.display = 'none'; }
-        function abrirSérie(s) {
-            document.getElementById('modal-title').innerText = s.n;
-            const lista = document.getElementById('lista-eps');
-            lista.innerHTML = "";
-            s.eps.forEach(ep => {
-                const d = document.createElement('div');
-                d.className = 'ep-row';
-                d.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">ASSISTIR</b>`;
-                d.onclick = () => { fecharModal(); play(ep.u); };
-                lista.appendChild(d);
-            });
-            document.getElementById('series-modal').style.display = 'block';
-        }
-        function fecharModal() { document.getElementById('series-modal').style.display = 'none'; }
-        function buscaRealTime() {
-            const termo = document.getElementById('search').value.toLowerCase();
-            let res = [];
-            if (modoAtual === 'filmes') {
-                Object.values(catalogo.filmes).forEach(g => res = res.concat(g.filter(f => f.n.toLowerCase().includes(termo))));
-            } else {
-                Object.values(catalogo.series).forEach(g => res = res.concat(Object.values(g).filter(s => s.n.toLowerCase().includes(termo))));
             }
-            renderGrid(res);
+        });
+    }
+
+    function play(url) {
+        const p = document.getElementById('player-box');
+        const v = document.getElementById('vid');
+        p.style.display = 'block';
+        if(Hls.isSupported()) {
+            var hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(v);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+        } else {
+            v.src = url;
+            v.play();
         }
-    </script>
+    }
+
+    function fechar() {
+        document.getElementById('vid').pause();
+        document.getElementById('player-box').style.display = 'none';
+    }
+</script>
 </body>
 </html>
