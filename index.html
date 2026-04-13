@@ -3,101 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream VOD - BYPASS MODE</title>
+    <title>Stream VOD - MODO OFFLINE/LOCAL</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        body { background: #000; color: #fff; font-family: sans-serif; margin: 0; text-align: center; }
-        .setup-container { padding: 40px 20px; }
-        input { width: 90%; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #111; color: #fff; }
-        .btn { padding: 15px 30px; background: #e50914; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 90%; }
-        #player-box { display: none; position: fixed; inset: 0; z-index: 9999; background: #000; }
-        video { width: 100%; height: 80%; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
-        .card { background: #111; border-radius: 5px; font-size: 10px; padding: 5px; }
-        .card img { width: 100%; height: 120px; object-fit: cover; }
+        :root { --red: #e50914; --black: #050505; --gray: #1a1a1a; }
+        body { background: var(--black); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        
+        /* Área de Colar a Lista */
+        #setup-screen { padding: 20px; text-align: center; }
+        textarea { 
+            width: 100%; height: 200px; background: #111; color: #0f0; 
+            border: 1px solid #333; border-radius: 8px; font-family: monospace; font-size: 10px;
+            margin-bottom: 15px; padding: 10px; box-sizing: border-box;
+        }
+        
+        .btn-action { 
+            background: var(--red); color: white; border: none; padding: 15px; 
+            border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer;
+        }
+
+        /* Grid de Conteúdo */
+        #main-content { display: none; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 15px; }
+        .card { background: var(--gray); border-radius: 8px; overflow: hidden; text-align: center; font-size: 11px; }
+        .card img { width: 100%; height: 150px; object-fit: cover; background: #222; }
+        .card div { padding: 5px; height: 30px; overflow: hidden; }
+
+        /* Player */
+        #player-box { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; }
+        video { width: 100%; height: auto; aspect-ratio: 16/9; }
+        .close-btn { background: var(--red); padding: 15px; text-align: center; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="setup" class="setup-container">
-    <h2>BYPASS LOADER</h2>
-    <p style="font-size: 12px; color: #888;">Se o link falhar, mude o tipo de saída para <b>&output=ts</b></p>
-    <input type="text" id="m3u" placeholder="Cole seu link M3U aqui..." value="http://bufalov6.shop/get.php?username=17127281&password=SUA_SENHA&type=m3u_plus&output=ts">
-    <button class="btn" onclick="forcarCarga()">FORÇAR ENTRADA (MÉTODO 4)</button>
-    <div id="log" style="font-size: 10px; color: yellow; margin-top: 10px;"></div>
+<div id="setup-screen">
+    <h2 style="color:var(--red)">INJETOR DE LISTA LOCAL</h2>
+    <p style="font-size: 12px; color: #aaa;">Baixe sua lista .m3u, abra como texto, copie tudo e cole abaixo:</p>
+    <textarea id="raw-data" placeholder="Cole aqui o conteúdo do seu arquivo M3U..."></textarea>
+    <button class="btn-action" onclick="injetarLista()">INJETAR E ABRIR APP</button>
 </div>
 
-<div id="content" style="display:none;">
-    <div id="grid-vod" class="grid"></div>
+<div id="main-content">
+    <div style="padding: 15px; background: #111; display: flex; gap: 10px;">
+        <input type="text" id="search" placeholder="Buscar..." oninput="filtrar()" style="flex:1; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:5px;">
+        <button onclick="location.reload()" style="background:#444; border:none; color:white; padding:10px; border-radius:5px;">Sair</button>
+    </div>
+    <div class="grid" id="grid"></div>
 </div>
 
 <div id="player-box">
-    <video id="vid" controls></video>
-    <button class="btn" onclick="fechar()">FECHAR CANAL</button>
+    <video id="video-player" controls autoplay></video>
+    <div class="close-btn" onclick="fecharPlayer()">FECHAR PLAYER X</div>
 </div>
 
 <script>
-    // Lista de Proxies de reserva caso o servidor mude o bloqueio
-    const gatekeeper = "https://worker-bold-morning-8a5b.playflix-cors.workers.dev/?u=";
+    let bancoDados = [];
 
-    async function forcarCarga() {
-        const url = document.getElementById('m3u').value;
-        const log = document.getElementById('log');
-        log.innerText = "Iniciando quebra de handshake...";
+    function injetarLista() {
+        const raw = document.getElementById('raw-data').value;
+        if (!raw.includes('#EXTM3U')) return alert("Isso não parece uma lista M3U válida!");
 
-        try {
-            // Tentativa via Cloudflare Worker (Bypass mais forte que AllOrigins)
-            const response = await fetch(gatekeeper + btoa(url));
-            const text = await response.text();
+        bancoDados = [];
+        const blocos = raw.split('#EXTINF:');
+        
+        blocos.forEach(bloco => {
+            if (bloco.includes('http')) {
+                const linhas = bloco.split('\n');
+                const info = linhas[0];
+                const link = linhas.find(l => l.trim().startsWith('http'))?.trim();
+                const nome = info.split(',')[1]?.trim() || "Sem Nome";
+                const logo = info.match(/tvg-logo="(.*?)"/)?.[1] || "";
 
-            if (text.length < 100) throw new Error("Resposta muito curta");
+                if (link) {
+                    bancoDados.push({ n: nome, l: logo, u: link });
+                }
+            }
+        });
 
-            processar(text);
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('content').style.display = 'block';
-            log.innerText = "Conectado!";
-        } catch (e) {
-            log.innerText = "Servidor recusou. Tente abrir o link da lista direto no Chrome antes de usar o APK para 'autorizar' seu IP.";
-            console.error(e);
+        if (bancoDados.length > 0) {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            renderizar(bancoDados);
+        } else {
+            alert("Nenhum link encontrado na lista colada.");
         }
     }
 
-    function processar(data) {
-        const grid = document.getElementById('grid-vod');
-        const linhas = data.split('#EXTINF:');
-        linhas.forEach(l => {
-            if(l.includes('http')) {
-                const nome = l.split(',')[1]?.split('\n')[0] || "Canal";
-                const link = l.split('\n')[1]?.trim();
-                const logo = l.match(/tvg-logo="(.*?)"/)?.[1] || "";
-                
-                const div = document.createElement('div');
-                div.className = 'card';
-                div.innerHTML = `<img src="${logo}"><div>${nome.substring(0,20)}</div>`;
-                div.onclick = () => play(link);
-                grid.appendChild(div);
-            }
+    function renderizar(lista) {
+        const grid = document.getElementById('grid');
+        grid.innerHTML = "";
+        lista.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+                <img src="${item.l}" onerror="this.src='https://via.placeholder.com/150x200?text=VOD'">
+                <div>${item.n.substring(0, 30)}</div>
+            `;
+            div.onclick = () => play(item.u);
+            grid.appendChild(div);
         });
     }
 
     function play(url) {
-        const p = document.getElementById('player-box');
-        const v = document.getElementById('vid');
-        p.style.display = 'block';
-        if(Hls.isSupported()) {
-            var hls = new Hls();
+        const box = document.getElementById('player-box');
+        const v = document.getElementById('video-player');
+        box.style.display = 'block';
+        
+        if (Hls.isSupported()) {
+            const hls = new Hls();
             hls.loadSource(url);
             hls.attachMedia(v);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
         } else {
             v.src = url;
-            v.play();
         }
     }
 
-    function fechar() {
-        document.getElementById('vid').pause();
+    function fecharPlayer() {
+        const v = document.getElementById('video-player');
+        v.pause();
+        v.src = "";
         document.getElementById('player-box').style.display = 'none';
+    }
+
+    function filtrar() {
+        const termo = document.getElementById('search').value.toLowerCase();
+        const filtrados = bancoDados.filter(i => i.n.toLowerCase().includes(termo));
+        renderizar(filtrados);
     }
 </script>
 </body>
