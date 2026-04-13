@@ -4,169 +4,178 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
-    <title>Ultra Player Pro</title>
+    <title>PlayFlix VIP</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
-        :root { --primary: #00ff00; --bg: #000; --surface: #111; --text: #fff; }
-        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+        :root { --primary: #00ed51; --bg: #000000; --card: #121212; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #fff; margin: 0; }
 
         /* Player */
-        #player-container { width: 100%; display: none; background: #000; position: sticky; top: 0; z-index: 2000; }
+        #player-box { width: 100%; display: none; background: #000; position: sticky; top: 0; z-index: 9999; }
         video { width: 100%; aspect-ratio: 16/9; display: block; }
-        .close-btn { background: #ff0000; color: white; text-align: center; padding: 10px; font-weight: bold; cursor: pointer; }
+        .close-p { background: #ff003c; text-align: center; padding: 10px; font-weight: bold; cursor: pointer; }
 
         /* Header */
-        .header { padding: 15px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
-        .btn-sync { background: var(--primary); color: #000; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; }
-
-        /* Tabs */
-        .tabs { display: flex; gap: 5px; padding: 10px; overflow-x: auto; }
-        .tab { background: #222; padding: 10px 20px; border-radius: 5px; white-space: nowrap; font-size: 13px; cursor: pointer; }
-        .tab.active { background: var(--primary); color: #000; font-weight: bold; }
+        .header { padding: 15px; background: #111; border-bottom: 1px solid #222; }
+        .btn-sync { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        
+        /* Nav */
+        .nav { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #080808; }
+        .tab { padding: 8px 20px; background: #222; border-radius: 20px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+        .tab.active { background: #fff; color: #000; font-weight: bold; }
 
         /* Grid */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
-        .card { background: var(--surface); border-radius: 5px; overflow: hidden; position: relative; }
-        .card img { width: 100%; height: 140px; object-fit: cover; background: #222; }
-        .card .name { font-size: 10px; padding: 5px; text-align: center; height: 30px; display: flex; align-items: center; justify-content: center; }
+        .card { background: var(--card); border-radius: 10px; overflow: hidden; position: relative; border: 1px solid #1a1a1a; }
+        .card img { width: 100%; height: 150px; object-fit: cover; background: #1a1a1a; }
+        .card .title { font-size: 10px; padding: 8px; text-align: center; height: 30px; display: flex; align-items: center; justify-content: center; }
         
         /* Modal */
-        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; padding: 20px; overflow-y: auto; }
-        .ep-item { padding: 15px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; padding: 20px; overflow-y: auto; }
+        .ep { padding: 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
 
-    <div id="player-container">
+    <div id="player-box">
         <video id="video" controls autoplay playsinline></video>
-        <div class="close-btn" onclick="fecharPlayer()">FECHAR X</div>
+        <div class="close-p" onclick="stopPlayer()">FECHAR PLAYER X</div>
     </div>
 
     <div class="header">
-        <button class="btn-sync" onclick="carregarLista()">CARREGAR LISTA</button>
-        <input type="text" id="search" placeholder="Buscar..." style="padding:10px; border-radius:5px; border:none; outline:none;" oninput="filtrar()">
+        <button class="btn-sync" id="syncBtn" onclick="fetchM3U()">CARREGAR LISTA AGORA</button>
+        <input type="text" id="search" placeholder="Buscar filmes ou séries..." style="width:100%; padding:12px; border-radius:8px; border:1px solid #333; background:#1a1a1a; color:#fff; box-sizing:border-box;" oninput="search()">
     </div>
 
-    <div id="tabs-container" class="tabs"></div>
-    <div id="main-grid" class="grid"></div>
+    <div id="tabs" class="nav"></div>
+    <div id="grid" class="grid"></div>
 
     <div id="modal">
-        <h2 id="modal-title"></h2>
-        <div id="ep-list"></div>
-        <button onclick="fecharModal()" style="width:100%; padding:15px; margin-top:20px; background:#444; color:white; border:none; border-radius:5px;">VOLTAR</button>
+        <h2 id="m-title" style="color:var(--primary)"></h2>
+        <div id="m-list"></div>
+        <button onclick="closeM()" style="width:100%; padding:15px; background:#222; color:#fff; border:none; border-radius:10px; margin-top:20px;">VOLTAR</button>
     </div>
 
     <script>
-        let db = { filmes: {}, series: {} };
-        let catAtual = 'filmes';
-        let player = null;
-        const URL_M3U = "http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts";
+        let dataStore = { filmes: {}, series: {} };
+        let currentMode = 'filmes';
+        let shakaInstance = null;
+        
+        // Proxy para evitar erro de CORS no GitHub Pages
+        const PROXY = "https://corsproxy.io/?"; 
+        const M3U_URL = "http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts";
 
         shaka.polyfill.installAll();
 
-        async function carregarLista() {
+        async function fetchM3U() {
+            const btn = document.getElementById('syncBtn');
+            btn.innerText = "Sincronizando...";
             try {
-                const res = await fetch(URL_M3U);
-                const data = await res.text();
+                // Usando proxy para permitir acesso HTTP dentro do GitHub HTTPS
+                const response = await fetch(PROXY + encodeURIComponent(M3U_URL));
+                const text = await response.text();
+                
                 const regex = /#EXTINF:(?:.*?group-title="([^"]*)")?(?:.*?tvg-logo="([^"]*)")?[^,]*,(.*)\n(http[^\n\r]*)/g;
                 let m;
-                db = { filmes: {}, series: {} };
+                dataStore = { filmes: {}, series: {} };
 
-                while ((m = regex.exec(data)) !== null) {
-                    const [_, grupo, logo, nome, link] = m;
-                    const gLower = (grupo || "").toLowerCase();
-                    if (!gLower.includes('filme') && !gLower.includes('serie')) continue;
-
-                    if (gLower.includes('serie')) {
-                        let base = nome.split(/S\d+|T\d+|EP|TEMP/i)[0].trim();
-                        if (!db.series[grupo]) db.series[grupo] = {};
-                        if (!db.series[grupo][base]) db.series[grupo][base] = { n: base, l: logo, eps: [] };
-                        db.series[grupo][base].eps.push({ n: nome, u: link });
-                    } else {
-                        if (!db.filmes[grupo]) db.filmes[grupo] = [];
-                        db.filmes[grupo].push({ n: nome, l: logo, u: link });
+                while ((m = regex.exec(text)) !== null) {
+                    const [_, group, logo, name, link] = m;
+                    const g = (group || "Outros").toLowerCase();
+                    
+                    if (g.includes('serie')) {
+                        let base = name.split(/S\d+|T\d+|TEMP|EP/i)[0].trim();
+                        if (!dataStore.series[group]) dataStore.series[group] = {};
+                        if (!dataStore.series[group][base]) dataStore.series[group][base] = { n: base, l: logo, eps: [] };
+                        dataStore.series[group][base].eps.push({ n: name, u: link });
+                    } else if (g.includes('filme')) {
+                        if (!dataStore.filmes[group]) dataStore.filmes[group] = [];
+                        dataStore.filmes[group].push({ n: name, l: logo, u: link });
                     }
                 }
+                btn.style.display = 'none';
                 renderTabs('filmes');
-            } catch (e) { alert("Erro ao carregar lista"); }
+            } catch (e) {
+                alert("Erro ao carregar. Tente novamente em instantes.");
+                btn.innerText = "CARREGAR LISTA AGORA";
+            }
         }
 
-        function renderTabs(modo) {
-            catAtual = modo;
-            const container = document.getElementById('tabs-container');
+        function renderTabs(mode) {
+            currentMode = mode;
+            const container = document.getElementById('tabs');
             container.innerHTML = "";
-            const grupos = Object.keys(db[modo]);
-            grupos.forEach((g, i) => {
-                const div = document.createElement('div');
-                div.className = `tab ${i === 0 ? 'active' : ''}`;
-                div.innerText = g;
-                div.onclick = () => {
+            const groups = Object.keys(dataStore[mode]);
+            groups.forEach((g, i) => {
+                const d = document.createElement('div');
+                d.className = `tab ${i === 0 ? 'active' : ''}`;
+                d.innerText = g;
+                d.onclick = () => {
                     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    div.classList.add('active');
-                    renderGrid(db[modo][g]);
+                    d.classList.add('active');
+                    renderGrid(dataStore[mode][g]);
                 };
-                container.appendChild(div);
+                container.appendChild(d);
             });
-            if (grupos.length > 0) renderGrid(db[modo][grupos[0]]);
+            if (groups.length > 0) renderGrid(dataStore[mode][groups[0]]);
         }
 
-        function renderGrid(itens) {
-            const grid = document.getElementById('main-grid');
+        function renderGrid(items) {
+            const grid = document.getElementById('grid');
             grid.innerHTML = "";
-            const lista = catAtual === 'series' ? Object.values(itens) : itens;
+            const list = currentMode === 'series' ? Object.values(items) : items;
 
-            lista.forEach(item => {
+            list.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                // Fallback para imagem caso o link da capa falhe
-                const logo = item.l || 'https://via.placeholder.com/300x450/111/fff?text=Sem+Capa';
+                // Usando Referrer Policy para carregar a capa
+                const img = item.l || 'https://via.placeholder.com/300x450/111/333?text=PlayFlix';
                 card.innerHTML = `
-                    <img src="${logo}" onerror="this.src='https://via.placeholder.com/300x450/111/fff?text=Erro+Capa'">
-                    <div class="name">${item.n}</div>
+                    <img src="${img}" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=Erro+Capa'">
+                    <div class="title">${item.n}</div>
                 `;
-                card.onclick = () => catAtual === 'series' ? abrirSerie(item) : play(item.u);
+                card.onclick = () => currentMode === 'series' ? openS(item) : playStream(item.u);
                 grid.appendChild(card);
             });
         }
 
-        async function play(url) {
-            const video = document.getElementById('video');
-            document.getElementById('player-container').style.display = 'block';
-            if (player) await player.destroy();
-            player = new shaka.Player(video);
+        async function playStream(url) {
+            const v = document.getElementById('video');
+            document.getElementById('player-box').style.display = 'block';
+            if (shakaInstance) await shakaInstance.destroy();
+            shakaInstance = new shaka.Player(v);
             try { 
-                await player.load(url); 
+                await shakaInstance.load(url); 
             } catch (e) { 
-                // Fallback para player nativo se o Shaka falhar (comum em arquivos .ts)
-                video.src = url; 
+                v.src = url; // Fallback para .ts
             }
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function fecharPlayer() {
+        function stopPlayer() {
             document.getElementById('video').pause();
-            document.getElementById('player-container').style.display = 'none';
+            document.getElementById('player-box').style.display = 'none';
         }
 
-        function abrirSerie(s) {
-            document.getElementById('modal-title').innerText = s.n;
-            const list = document.getElementById('ep-list');
+        function openS(s) {
+            document.getElementById('m-title').innerText = s.n;
+            const list = document.getElementById('m-list');
             list.innerHTML = "";
             s.eps.sort((a,b) => a.n.localeCompare(b.n, undefined, {numeric: true}));
             s.eps.forEach(ep => {
-                const div = document.createElement('div');
-                div.className = 'ep-item';
-                div.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">PLAY</b>`;
-                div.onclick = () => { fecharModal(); play(ep.u); };
-                list.appendChild(div);
+                const d = document.createElement('div');
+                d.className = 'ep';
+                d.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">ASSISTIR</b>`;
+                d.onclick = () => { closeM(); playStream(ep.u); };
+                list.appendChild(d);
             });
             document.getElementById('modal').style.display = 'block';
         }
 
-        function fecharModal() { document.getElementById('modal').style.display = 'none'; }
+        function closeM() { document.getElementById('modal').style.display = 'none'; }
     </script>
 </body>
 </html>
