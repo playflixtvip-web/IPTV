@@ -3,29 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PlayFlix VIP - Sistema Master</title>
+    <title>PlayFlix VIP</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { --red: #e50914; --bg: #050505; --card: #121212; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; overflow-x: hidden; }
         .container { padding: 20px; max-width: 1100px; margin: auto; }
         .hidden { display: none !important; }
         .box { background: var(--card); padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
         input { width: 100%; padding: 12px; margin: 8px 0; background: #222; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
         button { background: var(--red); color: white; border: none; padding: 12px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        .category-title { margin-top: 30px; color: #fff; font-size: 1.2rem; border-left: 4px solid var(--red); padding-left: 10px; font-weight: bold; }
+        
+        /* Layout Estilo Streaming */
+        .category-title { margin-top: 30px; color: #fff; font-size: 1.2rem; border-left: 4px solid var(--red); padding-left: 10px; font-weight: bold; text-transform: uppercase; }
         .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
-        .movie-item { transition: 0.3s; cursor: pointer; background: #1a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid transparent; text-align: center; }
+        .movie-item { transition: 0.3s; cursor: pointer; background: #1a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid #222; }
         .movie-item:hover { transform: scale(1.05); border-color: var(--red); }
         .movie-item img { width: 100%; height: 190px; object-fit: cover; background: #000; }
-        .movie-name { padding: 5px; font-size: 11px; height: 30px; overflow: hidden; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-        th, td { padding: 10px; border-bottom: 1px solid #333; text-align: left; }
+        .movie-name { padding: 8px; font-size: 11px; text-align: center; height: 35px; display: flex; align-items: center; justify-content: center; }
+
+        /* Player */
         #player-modal { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; }
-        video { width: 100%; height: 100%; }
-        .close-p { position: absolute; top: 20px; right: 20px; background: var(--red); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; z-index: 10001; cursor: pointer; }
+        video { width: 100%; height: 100%; outline: none; }
+        .close-p { position: absolute; top: 20px; right: 20px; background: var(--red); color: white; border: none; border-radius: 50%; width: 45px; height: 45px; z-index: 10001; cursor: pointer; font-weight: bold; font-size: 20px; }
     </style>
 </head>
 <body>
@@ -35,38 +37,36 @@
         <h2 style="color:var(--red)">PlayFlix</h2>
         <input type="text" id="user" placeholder="Usuário">
         <input type="password" id="pass" placeholder="Senha">
-        <button onclick="autenticar()" style="width:100%">LOGAR</button>
+        <button onclick="autenticar()" style="width:100%">ENTRAR</button>
     </div>
 </div>
 
 <div id="scr-adm" class="container hidden">
     <div class="box">
-        <h3>Servidor (URL da Lista)</h3>
-        <input type="text" id="m3u-url" placeholder="URL da lista (ex: ctdg.me)">
-        <button onclick="salvarConfig()" style="background:#27ae60">SALVAR URL NO FIREBASE</button>
+        <h3>Configuração da Lista (Link GitHub RAW)</h3>
+        <input type="text" id="m3u-url" placeholder="https://raw.githubusercontent.com/...">
+        <button onclick="salvarConfig()" style="background:#27ae60">SALVAR URL</button>
     </div>
     <div class="box">
-        <h3>Gerenciar Clientes</h3>
+        <h3>Controle de Usuários</h3>
         <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px">
             <input type="text" id="nu" placeholder="Login">
             <input type="text" id="np" placeholder="Senha">
             <input type="number" id="nd" placeholder="Dias">
         </div>
         <button onclick="addUser()" style="margin-top:10px">CRIAR ACESSO</button>
-        <table>
-            <thead><tr><th>Usuário</th><th>Vencimento</th><th>Ação</th></tr></thead>
-            <tbody id="lista-users"></tbody>
-        </table>
+        <div id="lista-users-container" style="margin-top:15px; max-height: 200px; overflow-y: auto;">
+             </div>
     </div>
     <button onclick="location.reload()" style="background:#444">SAIR</button>
 </div>
 
 <div id="scr-user" class="hidden">
-    <div style="padding: 15px; background: #000; position: sticky; top:0; z-index:100; display:flex; justify-content:space-between;">
+    <div style="padding: 15px; background: #000; position: sticky; top:0; z-index:100; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #222;">
         <h2 style="color:var(--red); margin:0;">PlayFlix</h2>
-        <button onclick="location.reload()" style="background:#333">SAIR</button>
+        <button onclick="location.reload()" style="background:#333; font-size: 12px;">SAIR</button>
     </div>
-    <div id="loading" style="text-align:center; padding:50px;" class="hidden">Buscando conteúdo do servidor...</div>
+    <div id="loading" style="text-align:center; padding:50px;" class="hidden">Carregando catálogo...</div>
     <div id="catalogo" class="container" style="max-width:100%"></div>
 </div>
 
@@ -76,7 +76,6 @@
 </div>
 
 <script>
-// Configuração Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyCfl6Gwpult8zt456YtKyiaInDYQuEHFry",
     authDomain: "meuscanais-f21c1.firebaseapp.com",
@@ -97,7 +96,7 @@ async function autenticar() {
         if(doc.exists && doc.data().senha === p) {
             if(Date.now() > doc.data().expira) return alert("Acesso vencido!");
             abrir('scr-user'); buscarEShow();
-        } else { alert("Acesso Negado!"); }
+        } else { alert("Usuário ou senha incorretos!"); }
     }
 }
 
@@ -106,22 +105,24 @@ function abrir(id) {
     document.getElementById(id).classList.remove('hidden');
 }
 
-// ADM
+// FUNÇÕES ADM
 async function salvarConfig() {
     const url = document.getElementById('m3u-url').value;
     await db.collection("config").doc("geral").set({ urlM3U: url });
-    alert("URL Salva com sucesso!");
+    alert("URL da lista salva!");
 }
 
 async function carregarPainelAdm() {
     const doc = await db.collection("config").doc("geral").get();
     if(doc.exists) document.getElementById('m3u-url').value = doc.data().urlM3U;
+    
     db.collection("usuarios").onSnapshot(snap => {
-        const tb = document.getElementById('lista-users'); tb.innerHTML = "";
+        let html = '<table style="width:100%; border-collapse:collapse;"><thead><tr style="text-align:left; border-bottom:1px solid #444;"><th>User</th><th>Ação</th></tr></thead><tbody>';
         snap.forEach(u => {
-            const dias = Math.ceil((u.data().expira - Date.now()) / 86400000);
-            tb.innerHTML += `<tr><td>${u.id}</td><td>${dias}d</td><td><button onclick="removerU('${u.id}')">X</button></td></tr>`;
+            html += `<tr style="border-bottom:1px solid #222;"><td>${u.id}</td><td><button onclick="removerU('${u.id}')" style="padding:5px; background:#444">X</button></td></tr>`;
         });
+        html += '</tbody></table>';
+        document.getElementById('lista-users-container').innerHTML = html;
     });
 }
 
@@ -129,26 +130,25 @@ async function addUser() {
     const u = document.getElementById('nu').value, p = document.getElementById('np').value, d = parseInt(document.getElementById('nd').value);
     const exp = Date.now() + (d * 86400000);
     await db.collection("usuarios").doc(u).set({ senha: p, expira: exp, status: "ativo" });
-    alert("Criado!");
+    alert("Usuário Criado!");
 }
 
-async function removerU(id) { if(confirm("Excluir?")) await db.collection("usuarios").doc(id).delete(); }
+async function removerU(id) { if(confirm("Excluir usuário?")) await db.collection("usuarios").doc(id).delete(); }
 
-// BUSCA COM PROXY REFORÇADO
+// BUSCA DE CONTEÚDO (GITHUB RAW)
 async function buscarEShow() {
     document.getElementById('loading').classList.remove('hidden');
     const doc = await db.collection("config").doc("geral").get();
     if(!doc.exists) return;
 
     const urlOriginal = doc.data().urlM3U;
-    // Usamos o AllOrigins para ignorar bloqueio de CORS
+    // Usamos proxy para evitar que o navegador bloqueie a leitura do arquivo
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlOriginal)}`;
 
     try {
         const response = await fetch(proxyUrl);
         const data = await response.json();
         const text = data.contents;
-        
         const categorias = {};
         const blocos = text.split('#EXTINF:');
         blocos.shift();
@@ -158,7 +158,7 @@ async function buscarEShow() {
                 const linhas = bloco.split('\n');
                 const info = linhas[0];
                 const videoUrl = linhas.find(l => l.trim().startsWith('http'))?.trim();
-                const grupo = info.match(/group-title="(.*?)"/)?.[1] || "Geral";
+                const grupo = info.match(/group-title="(.*?)"/)?.[1] || "Diversos";
                 const nome = info.split(',')[1]?.trim() || "Conteúdo";
                 const logo = info.match(/tvg-logo="(.*?)"/)?.[1] || "";
 
@@ -167,7 +167,7 @@ async function buscarEShow() {
             }
         });
         renderizar(categorias);
-    } catch (e) { alert("Erro ao conectar com o servidor da lista."); }
+    } catch (e) { alert("Erro ao carregar lista. Verifique o link RAW no ADM."); }
     document.getElementById('loading').classList.add('hidden');
 }
 
@@ -181,7 +181,7 @@ function renderizar(categorias) {
         categorias[cat].forEach(item => {
             const div = document.createElement('div');
             div.className = 'movie-item';
-            div.innerHTML = `<img src="${item.logo}" onerror="this.src='https://via.placeholder.com/200x300?text=PlayFlix'"><div class="movie-name">${item.nome}</div>`;
+            div.innerHTML = `<img src="${item.logo}" onerror="this.src='https://via.placeholder.com/200x300?text=Sem+Foto'"><div class="movie-name">${item.nome}</div>`;
             div.onclick = () => play(item.url);
             grid.appendChild(div);
         });
@@ -189,20 +189,35 @@ function renderizar(categorias) {
     }
 }
 
+// PLAYER INTELIGENTE (DRIVE + IPTV)
 function play(url) {
     const video = document.getElementById('vid');
     document.getElementById('player-modal').style.display = 'block';
     
-    // Converte links .ts para m3u8 se necessário para maior compatibilidade
-    let finalUrl = url;
-    if(url.includes('output=ts')) finalUrl = url.replace('output=ts', 'output=m3u8');
+    let cleanUrl = url.trim();
 
-    if(Hls.isSupported()) {
+    // Se for Google Drive (ajusta o link se for o comum)
+    if(cleanUrl.includes('drive.google.com')){
+       cleanUrl = cleanUrl.replace('/view?usp=drivesdk', '');
+       cleanUrl = cleanUrl.replace('file/d/', 'uc?id=');
+       cleanUrl += '&export=media';
+    }
+
+    // Se for vídeo direto (.mp4, .mkv ou Drive)
+    if(cleanUrl.includes('.mp4') || cleanUrl.includes('google.com') || cleanUrl.includes('.mkv')) {
+        video.src = cleanUrl;
+        video.play().catch(() => alert("Erro ao reproduzir link direto. Verifique se o vídeo é público."));
+    } 
+    // Se for transmissão IPTV (HLS)
+    else if (Hls.isSupported()) {
         const hls = new Hls({ xhrSetup: xhr => xhr.withCredentials = false });
-        hls.loadSource(finalUrl);
+        hls.loadSource(cleanUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-    } else { video.src = finalUrl; video.play(); }
+    } else {
+        video.src = cleanUrl;
+        video.play();
+    }
 }
 
 function fecharPlayer() {
