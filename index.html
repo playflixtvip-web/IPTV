@@ -3,192 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADM - Gerenciador Streaming</title>
+    <title>PlayFlix VIP - Sistema Master</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        :root { --red: #e50914; --dark: #0a0a0a; --card: #141414; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: white; margin: 0; }
+        :root { --red: #e50914; --bg: #050505; --card: #121212; }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .container { padding: 20px; max-width: 1100px; margin: auto; }
+        .hidden { display: none !important; }
+        .box { background: var(--card); padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
         
-        /* Telas */
-        .screen { display: none; padding: 20px; }
-        .active { display: block; }
+        input { width: 100%; padding: 12px; margin: 8px 0; background: #222; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
+        button { background: var(--red); color: white; border: none; padding: 12px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        
+        /* Grid Estilo Streaming */
+        .category-title { margin-top: 30px; color: #fff; font-size: 1.2rem; border-left: 4px solid var(--red); padding-left: 10px; font-weight: bold; }
+        .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
+        .movie-item { transition: 0.3s; cursor: pointer; background: #1a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid transparent; }
+        .movie-item:hover { transform: scale(1.05); border-color: var(--red); }
+        .movie-item img { width: 100%; height: 190px; object-fit: cover; background: #000; }
+        .movie-name { padding: 5px; font-size: 11px; text-align: center; height: 30px; overflow: hidden; }
 
-        /* Login */
-        .login-box { max-width: 350px; margin: 100px auto; background: var(--card); padding: 30px; border-radius: 10px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #333; border: none; color: white; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: var(--red); color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-
-        /* Dashboard */
-        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        .tab-btn { background: none; border: 1px solid #444; width: auto; padding: 8px 20px; font-size: 14px; }
-        .tab-btn.active-tab { background: var(--red); border-color: var(--red); }
-
-        /* Tabelas/Lista */
-        .user-card { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444; }
-        .status-ativo { border-left-color: #2ecc71; }
-        .status-suspenso { border-left-color: #e74c3c; }
-        .actions { display: flex; gap: 5px; }
-        .btn-sm { padding: 5px 10px; font-size: 11px; width: auto; }
-        textarea { width: 100%; height: 200px; background: #111; color: #0f0; border: 1px solid #333; padding: 10px; }
+        /* Tabela ADM */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        th, td { padding: 10px; border-bottom: 1px solid #333; text-align: left; }
+        
+        #player-modal { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; }
+        video { width: 100%; height: 100%; }
+        .close-p { position: absolute; top: 20px; right: 20px; background: var(--red); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; z-index: 10001; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="screen active">
-        <div class="login-box">
-            <h2 style="color:var(--red)">ADM LOGIN</h2>
-            <input type="text" id="admUser" placeholder="Usuário">
-            <input type="password" id="admPass" placeholder="Senha">
-            <button onclick="checkLogin()">ENTRAR NO PAINEL</button>
-        </div>
+<div id="scr-login" style="display:flex; height:100vh; align-items:center; justify-content:center;">
+    <div class="box" style="width:300px; text-align:center;">
+        <h2 style="color:var(--red)">PlayFlix</h2>
+        <input type="text" id="user" placeholder="Usuário">
+        <input type="password" id="pass" placeholder="Senha">
+        <button onclick="autenticar()" style="width:100%">LOGAR</button>
+    </div>
+</div>
+
+<div id="scr-adm" class="container hidden">
+    <div class="box">
+        <h3>Servidor (URL da Lista)</h3>
+        <input type="text" id="m3u-url" placeholder="Cole a URL do servidor aqui...">
+        <button onclick="salvarConfig()" style="background:#27ae60">SALVAR CONFIGURAÇÃO</button>
     </div>
 
-    <div id="admin-panel" class="screen">
-        <div style="display:flex; justify-content: space-between; align-items: center;">
-            <h2>Gerenciador Pro</h2>
-            <button class="btn-sm" onclick="location.reload()" style="background:#444">SAIR</button>
+    <div class="box">
+        <h3>Gerenciar Clientes</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px">
+            <input type="text" id="nu" placeholder="Login">
+            <input type="text" id="np" placeholder="Senha">
+            <input type="number" id="nd" placeholder="Dias">
         </div>
-
-        <div class="nav-tabs">
-            <button class="tab-btn active-tab" onclick="switchAdmin('tab-lista')">LISTA M3U</button>
-            <button class="tab-btn" onclick="switchAdmin('tab-users')">USUÁRIOS</button>
-        </div>
-
-        <div id="tab-lista" class="admin-tab">
-            <h3>Editor da Lista Principal</h3>
-            <textarea id="m3uContent" placeholder="Cole o conteúdo da lista aqui..."></textarea>
-            <button onclick="saveM3U()">SALVAR E ATUALIZAR LISTA</button>
-        </div>
-
-        <div id="tab-users" class="admin-tab" style="display:none">
-            <div style="background:#222; padding:15px; border-radius:8px; margin-bottom:20px;">
-                <h4>Novo Usuário</h4>
-                <input type="text" id="newUserName" placeholder="Nome do Cliente" style="width:48%">
-                <input type="number" id="newUserDays" placeholder="Dias de Acesso" style="width:48%">
-                <button onclick="addUser()" style="background:#27ae60">CADASTRAR CLIENTE</button>
-            </div>
-            <div id="userList">
-                </div>
-        </div>
+        <button onclick="addUser()" style="margin-top:10px">CRIAR NOVO ACESSO</button>
+        <table>
+            <thead><tr><th>Usuário</th><th>Vencimento</th><th>Ações</th></tr></thead>
+            <tbody id="lista-users"></tbody>
+        </table>
     </div>
+    <button onclick="location.reload()" style="background:#444">SAIR DO PAINEL</button>
+</div>
 
-    <script>
-        // CONFIGURAÇÃO FIREBASE (Substitua pelos seus dados do console Firebase)
-        const firebaseConfig = {
-            apiKey: "SUA_API_KEY",
-            authDomain: "SEU_PROJETO.firebaseapp.com",
-            projectId: "SEU_PROJETO",
-            storageBucket: "SEU_PROJETO.appspot.com",
-            messagingSenderId: "ID",
-            appId: "APP_ID"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+<div id="scr-user" class="hidden">
+    <div style="padding: 15px; display:flex; justify-content:space-between; align-items:center; background: #000; position: sticky; top:0; z-index:100;">
+        <h2 style="color:var(--red); margin:0;">PlayFlix</h2>
+        <button onclick="location.reload()" style="background:#333">SAIR</button>
+    </div>
+    <div id="loading" style="text-align:center; padding:50px;" class="hidden">Carregando catálogo...</div>
+    <div id="catalogo" class="container" style="max-width:100%"></div>
+</div>
 
-        // Login Fixo solicitado
-        function checkLogin() {
-            const user = document.getElementById('admUser').value;
-            const pass = document.getElementById('admPass').value;
-            
-            if(user === "Rhuan" && pass === "270412") {
-                document.getElementById('login-screen').classList.remove('active');
-                document.getElementById('admin-panel').classList.add('active');
-                loadData();
-            } else {
-                alert("Acesso negado!");
+<div id="player-modal">
+    <button class="close-p" onclick="fecharPlayer()">X</button>
+    <video id="vid" controls autoplay playsinline crossorigin="anonymous"></video>
+</div>
+
+<script>
+// Configuração Firebase (Sua imagem 1000161270.png)
+const firebaseConfig = {
+    apiKey: "AIzaSyCfl6Gwpult8zt456YtKyiaInDYQuEHFry",
+    authDomain: "meuscanais-f21c1.firebaseapp.com",
+    projectId: "meuscanais-f21c1",
+    storageBucket: "meuscanais-f21c1.appspot.com",
+    messagingSenderId: "103509336122",
+    appId: "1:103509336122:web:5485d876b2f8eb6c2d503"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+async function autenticar() {
+    const u = document.getElementById('user').value;
+    const p = document.getElementById('pass').value;
+
+    if(u === "Rhuan" && p === "270412") {
+        abrir('scr-adm');
+        carregarPainelAdm();
+    } else {
+        const doc = await db.collection("usuarios").doc(u).get();
+        if(doc.exists && doc.data().senha === p) {
+            if(Date.now() > doc.data().expira) return alert("Acesso vencido!");
+            abrir('scr-user');
+            buscarEShow();
+        } else { alert("Login incorreto!"); }
+    }
+}
+
+function abrir(id) {
+    document.getElementById('scr-login').classList.add('hidden');
+    document.getElementById(id).classList.remove('hidden');
+}
+
+// ADM
+async function salvarConfig() {
+    const url = document.getElementById('m3u-url').value;
+    await db.collection("config").doc("geral").set({ urlM3U: url });
+    alert("URL do Servidor Atualizada!");
+}
+
+async function carregarPainelAdm() {
+    const doc = await db.collection("config").doc("geral").get();
+    if(doc.exists) document.getElementById('m3u-url').value = doc.data().urlM3U;
+
+    db.collection("usuarios").onSnapshot(snap => {
+        const tb = document.getElementById('lista-users');
+        tb.innerHTML = "";
+        snap.forEach(u => {
+            const dias = Math.ceil((u.data().expira - Date.now()) / (1000*60*60*24));
+            tb.innerHTML += `<tr><td>${u.id}</td><td>${dias} dias</td><td><button onclick="removerU('${u.id}')" style="background:#333; padding:5px">X</button></td></tr>`;
+        });
+    });
+}
+
+async function addUser() {
+    const u = document.getElementById('nu').value;
+    const p = document.getElementById('np').value;
+    const d = parseInt(document.getElementById('nd').value);
+    const exp = Date.now() + (d * 24 * 60 * 60 * 1000);
+    await db.collection("usuarios").doc(u).set({ senha: p, expira: exp, status: "ativo" });
+    alert("Usuário Criado!");
+}
+
+async function removerU(id) { if(confirm("Remover?")) await db.collection("usuarios").doc(id).delete(); }
+
+// LOGICA DE CARREGAMENTO COM PROXY (Evita tela preta)
+async function buscarEShow() {
+    document.getElementById('loading').classList.remove('hidden');
+    const doc = await db.collection("config").doc("geral").get();
+    if(!doc.exists || !doc.data().urlM3U) return alert("URL não configurada!");
+
+    const urlOriginal = doc.data().urlM3U;
+    const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(urlOriginal);
+
+    try {
+        const response = await fetch(proxyUrl);
+        const data = await response.json();
+        const text = data.contents;
+        
+        const categorias = {};
+        const blocos = text.split('#EXTINF:');
+        blocos.shift();
+
+        blocos.forEach(bloco => {
+            if(bloco.includes('http')) {
+                const lines = bloco.split('\n');
+                const info = lines[0];
+                const videoUrl = lines.find(l => l.trim().startsWith('http'))?.trim();
+                const grupo = info.match(/group-title="(.*?)"/)?.[1] || "Diversos";
+                const nome = info.split(',')[1]?.trim() || "Conteúdo";
+                const logo = info.match(/tvg-logo="(.*?)"/)?.[1] || "";
+
+                if(!categorias[grupo]) categorias[grupo] = [];
+                categorias[grupo].push({ nome, url: videoUrl, logo });
             }
-        }
+        });
 
-        function switchAdmin(id) {
-            document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
-            document.getElementById(id).style.display = 'block';
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
-            event.target.classList.add('active-tab');
-        }
+        renderizar(categorias);
+    } catch (e) { alert("Erro ao carregar lista do servidor."); }
+    document.getElementById('loading').classList.add('hidden');
+}
 
-        // --- FUNÇÕES DA LISTA ---
-        async function saveM3U() {
-            const content = document.getElementById('m3uContent').value;
-            await db.collection("config").doc("mainList").set({ data: content });
-            alert("Lista salva no Firebase!");
-        }
+function renderizar(categorias) {
+    const display = document.getElementById('catalogo');
+    display.innerHTML = "";
+    for(let cat in categorias) {
+        const section = document.createElement('div');
+        section.innerHTML = `<div class="category-title">${cat}</div><div class="movie-grid"></div>`;
+        const grid = section.querySelector('.movie-grid');
+        categorias[cat].forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'movie-item';
+            div.innerHTML = `<img src="${item.logo}" onerror="this.src='https://via.placeholder.com/200x300?text=PlayFlix'"><div class="movie-name">${item.nome}</div>`;
+            div.onclick = () => play(item.url);
+            grid.appendChild(div);
+        });
+        display.appendChild(section);
+    }
+}
 
-        async function loadData() {
-            // Carregar M3U
-            const doc = await db.collection("config").doc("mainList").get();
-            if(doc.exists) document.getElementById('m3uContent').value = doc.data().data;
-            
-            // Carregar Usuários
-            loadUsers();
-        }
+function play(url) {
+    const video = document.getElementById('vid');
+    document.getElementById('player-modal').style.display = 'block';
+    let finalUrl = url.includes('output=mpegts') ? url.replace('output=mpegts', 'output=m3u8') : url;
 
-        // --- FUNÇÕES DE USUÁRIOS ---
-        async function addUser() {
-            const name = document.getElementById('newUserName').value;
-            const days = parseInt(document.getElementById('newUserDays').value);
-            const vencimento = new Date();
-            vencimento.setDate(vencimento.getDate() + days);
+    if(Hls.isSupported()) {
+        const hls = new Hls({ xhrSetup: xhr => xhr.withCredentials = false });
+        hls.loadSource(finalUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+    } else { video.src = finalUrl; video.play(); }
+}
 
-            await db.collection("usuarios").add({
-                nome: name,
-                expira: vencimento.getTime(),
-                status: "ativo"
-            });
-            loadUsers();
-        }
-
-        async function loadUsers() {
-            const snapshot = await db.collection("usuarios").get();
-            const list = document.getElementById('userList');
-            list.innerHTML = "";
-            
-            snapshot.forEach(doc => {
-                const u = doc.data();
-                const resto = Math.ceil((u.expira - new Date().getTime()) / (1000*60*60*24));
-                
-                const div = document.createElement('div');
-                div.className = `user-card status-${u.status}`;
-                div.innerHTML = `
-                    <div>
-                        <b>${u.nome}</b><br>
-                        <small>${resto > 0 ? resto + ' dias restantes' : 'Expirado'}</small>
-                    </div>
-                    <div class="actions">
-                        <button class="btn-sm" onclick="addDays('${doc.id}', 30)" style="background:#2980b9">+30 dias</button>
-                        <button class="btn-sm" onclick="toggleStatus('${doc.id}', '${u.status}')" style="background:#f39c12">
-                            ${u.status === 'ativo' ? 'Suspender' : 'Ativar'}
-                        </button>
-                        <button class="btn-sm" onclick="deleteUser('${doc.id}')" style="background:#c0392b">X</button>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-        }
-
-        async function addDays(id, days) {
-            const ref = db.collection("usuarios").doc(id);
-            const doc = await ref.get();
-            const novaData = new Date(doc.data().expira);
-            novaData.setDate(novaData.getDate() + days);
-            await ref.update({ expira: novaData.getTime(), status: 'ativo' });
-            loadUsers();
-        }
-
-        async function toggleStatus(id, current) {
-            const newStatus = current === 'ativo' ? 'suspenso' : 'ativo';
-            await db.collection("usuarios").doc(id).update({ status: newStatus });
-            loadUsers();
-        }
-
-        async function deleteUser(id) {
-            if(confirm("Excluir usuário?")) {
-                await db.collection("usuarios").doc(id).delete();
-                loadUsers();
-            }
-        }
-    </script>
+function fecharPlayer() {
+    const v = document.getElementById('vid');
+    v.pause(); v.src = "";
+    document.getElementById('player-modal').style.display = 'none';
+}
+</script>
 </body>
 </html>
