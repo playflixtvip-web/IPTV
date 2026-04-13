@@ -7,75 +7,155 @@
     <title>PlayFlix VIP Pro</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root { --primary: #00ed51; --bg: #000; --card: #121212; }
-        body { font-family: sans-serif; background: var(--bg); color: #fff; margin: 0; }
-        #player-box { width: 100%; display: none; position: sticky; top: 0; z-index: 999; }
-        video { width: 100%; aspect-ratio: 16/9; background: #000; }
-        .header { padding: 15px; background: #111; }
-        .btn-sync { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #fff; margin: 0; }
+
+        /* Player */
+        #player-box { width: 100%; display: none; background: #000; position: sticky; top: 0; z-index: 9999; }
+        video { width: 100%; aspect-ratio: 16/9; display: block; }
+        .close-p { background: #ff003c; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; }
+
+        /* Header e Controles */
+        .header { padding: 15px; background: #111; border-bottom: 1px solid #222; }
+        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+        input { padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #fff; outline: none; }
+        .btn-sync { padding: 14px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
+        
+        /* Tabs e Grid */
+        .main-tabs { display: flex; gap: 10px; margin-top: 15px; }
+        .tab-m { flex: 1; padding: 10px; text-align: center; background: #222; border-radius: 5px; cursor: pointer; opacity: 0.6; }
+        .tab-m.active { opacity: 1; background: var(--primary); color: #000; }
+        
+        .nav { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #080808; }
+        .tab { padding: 8px 18px; background: #222; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; }
+        .tab.active { background: #fff; color: #000; font-weight: bold; }
+
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
-        .card { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid #222; }
+        .card { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid #1a1a1a; }
         .card img { width: 100%; height: 150px; object-fit: cover; background: #1a1a1a; }
-        .card .title { font-size: 10px; padding: 5px; text-align: center; }
+        .card .title { font-size: 10px; padding: 8px; text-align: center; height: 35px; display: flex; align-items: center; justify-content: center; }
+
+        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; padding: 20px; overflow-y: auto; }
+        .ep { padding: 16px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
     <div id="player-box">
         <video id="video" controls autoplay playsinline></video>
-        <button onclick="stopPlayer()" style="width:100%; padding:10px; background:red; color:white; border:none;">FECHAR PLAYER X</button>
+        <div class="close-p" onclick="stopPlayer()">FECHAR PLAYER X</div>
     </div>
 
     <div class="header">
-        <button class="btn-sync" id="syncBtn" onclick="fetchM3U()">SINCRONIZAR LISTA</button>
-        <input type="text" id="searchInput" placeholder="Buscar..." style="width:100%; margin-top:10px; padding:10px; border-radius:5px;" oninput="filtrar()">
+        <div class="input-group">
+            <input type="text" id="m3uUrl" placeholder="Cole aqui o link da sua lista M3U..." value="http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts">
+            <button class="btn-sync" id="syncBtn" onclick="fetchM3U()">CARREGAR LISTA</button>
+            <input type="text" id="search" placeholder="Buscar no catálogo..." oninput="filtrar()">
+        </div>
+
+        <div class="main-tabs">
+            <div id="m-filmes" class="tab-m active" onclick="switchMode('filmes')">FILMES</div>
+            <div id="m-series" class="tab-m" onclick="switchMode('series')">SÉRIES</div>
+        </div>
     </div>
 
+    <div id="tabs" class="nav"></div>
     <div id="grid" class="grid"></div>
 
+    <div id="modal">
+        <h2 id="m-title" style="color:var(--primary)"></h2>
+        <div id="m-list"></div>
+        <button onclick="closeM()" style="width:100%; padding:15px; background:#333; color:#fff; border:none; border-radius:10px; margin-top:20px;">VOLTAR</button>
+    </div>
+
     <script>
-        let dataStore = [];
+        let dataStore = { filmes: {}, series: {} };
+        let currentMode = 'filmes';
         let shakaInstance = null;
         const PROXY = "https://corsproxy.io/?"; 
-        const M3U_URL = "http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts";
 
         shaka.polyfill.installAll();
 
         async function fetchM3U() {
+            const urlInput = document.getElementById('m3uUrl').value;
+            if(!urlInput) return alert("Por favor, cole um link!");
+            
             const btn = document.getElementById('syncBtn');
-            btn.innerText = "Carregando...";
+            btn.innerText = "Processando...";
+            
             try {
-                const response = await fetch(PROXY + encodeURIComponent(M3U_URL));
+                const response = await fetch(PROXY + encodeURIComponent(urlInput));
                 const text = await response.text();
                 
-                const regex = /#EXTINF:.*tvg-logo="([^"]*)".*,(.*)\n(http.*)/g;
+                const regex = /#EXTINF:(?:.*?group-title="([^"]*)")?(?:.*?tvg-logo="([^"]*)")?[^,]*,(.*)\n(http[^\n\r]*)/g;
                 let m;
-                dataStore = [];
+                dataStore = { filmes: {}, series: {} };
 
                 while ((m = regex.exec(text)) !== null) {
-                    dataStore.push({ l: m[1], n: m[2], u: m[3] });
+                    const [_, group, logo, name, link] = m;
+                    const g = group || "Geral";
+                    const gL = g.toLowerCase();
+                    
+                    if (gL.includes('serie')) {
+                        let base = name.split(/S\d+|T\d+|TEMP|EP/i)[0].trim();
+                        if (!dataStore.series[g]) dataStore.series[g] = {};
+                        if (!dataStore.series[g][base]) dataStore.series[g][base] = { n: base, l: logo, eps: [] };
+                        dataStore.series[g][base].eps.push({ n: name, u: link });
+                    } else if (gL.includes('filme')) {
+                        if (!dataStore.filmes[g]) dataStore.filmes[g] = [];
+                        dataStore.filmes[g].push({ n: name, l: logo, u: link });
+                    }
                 }
-                renderGrid(dataStore);
-                btn.style.display = 'none';
+                btn.innerText = "LISTA CARREGADA!";
+                setTimeout(() => btn.innerText = "ATUALIZAR LISTA", 2000);
+                switchMode('filmes');
             } catch (e) {
-                alert("Erro de conexão. O servidor de lista pode estar offline.");
-                btn.innerText = "SINCRONIZAR LISTA";
+                alert("Erro ao carregar a lista. Verifique o link ou o proxy.");
+                btn.innerText = "TENTAR NOVAMENTE";
             }
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.tab-m').forEach(t => t.classList.remove('active'));
+            document.getElementById(`m-${mode}`).classList.add('active');
+            renderTabs(mode);
+        }
+
+        function renderTabs(mode) {
+            const container = document.getElementById('tabs');
+            container.innerHTML = "";
+            const groups = Object.keys(dataStore[mode]);
+            groups.forEach((g, i) => {
+                const d = document.createElement('div');
+                d.className = `tab ${i === 0 ? 'active' : ''}`;
+                d.innerText = g;
+                d.onclick = () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    d.classList.add('active');
+                    renderGrid(dataStore[mode][g]);
+                };
+                container.appendChild(d);
+            });
+            if (groups.length > 0) renderGrid(dataStore[mode][groups[0]]);
         }
 
         function renderGrid(items) {
             const grid = document.getElementById('grid');
             grid.innerHTML = "";
-            items.forEach(item => {
+            const list = currentMode === 'series' ? Object.values(items) : items;
+
+            list.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
-                    <img src="${item.l}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=Erro+Capa'">
+                    <img src="${item.l || ''}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=PlayFlix'">
                     <div class="title">${item.n}</div>
                 `;
-                card.onclick = () => playStream(item.u);
+                card.onclick = () => currentMode === 'series' ? openS(item) : playStream(item.u);
                 grid.appendChild(card);
             });
         }
@@ -85,12 +165,8 @@
             document.getElementById('player-box').style.display = 'block';
             if (shakaInstance) await shakaInstance.destroy();
             shakaInstance = new shaka.Player(v);
-            try { 
-                await shakaInstance.load(url); 
-            } catch (e) { 
-                v.src = url; // Fallback para .ts nativo
-            }
-            window.scrollTo(0,0);
+            try { await shakaInstance.load(url); } catch (e) { v.src = url; }
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
         function stopPlayer() {
@@ -98,10 +174,32 @@
             document.getElementById('player-box').style.display = 'none';
         }
 
+        function openS(s) {
+            document.getElementById('m-title').innerText = s.n;
+            const list = document.getElementById('m-list');
+            list.innerHTML = "";
+            s.eps.sort((a,b) => a.n.localeCompare(b.n, undefined, {numeric: true}));
+            s.eps.forEach(ep => {
+                const d = document.createElement('div');
+                d.className = 'ep';
+                d.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">PLAY</b>`;
+                d.onclick = () => { closeM(); playStream(ep.u); };
+                list.appendChild(d);
+            });
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function closeM() { document.getElementById('modal').style.display = 'none'; }
+
         function filtrar() {
-            const termo = document.getElementById('searchInput').value.toLowerCase();
-            const filtrados = dataStore.filter(f => f.n.toLowerCase().includes(termo));
-            renderGrid(filtrados);
+            const termo = document.getElementById('search').value.toLowerCase();
+            let res = [];
+            if (currentMode === 'filmes') {
+                Object.values(dataStore.filmes).forEach(g => res = res.concat(g.filter(f => f.n.toLowerCase().includes(termo))));
+            } else {
+                Object.values(dataStore.series).forEach(g => res = res.concat(Object.values(g).filter(s => s.n.toLowerCase().includes(termo))));
+            }
+            renderGrid(res);
         }
     </script>
 </body>
