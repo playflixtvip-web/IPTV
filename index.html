@@ -4,202 +4,369 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
-    <title>PlayFlix VIP Pro</title>
+    <title>Stream VOD Elite Pro</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
-        :root { --primary: #00ed51; --bg: #000; --card: #121212; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #fff; margin: 0; }
+        :root {
+            --primary: #e50914;
+            --bg: #050505;
+            --surface: #121212;
+            --text: #ffffff;
+            --radius: 12px;
+        }
 
-        /* Player */
-        #player-box { width: 100%; display: none; background: #000; position: sticky; top: 0; z-index: 9999; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding-bottom: 50px;
+        }
+
+        /* Player Fixo no Topo */
+        #player-section {
+            display: none;
+            position: sticky;
+            top: 0;
+            z-index: 5000;
+            background: #000;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.9);
+        }
         video { width: 100%; aspect-ratio: 16/9; display: block; }
-        .close-p { background: #ff003c; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; }
+        .close-player {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 13px;
+        }
 
-        /* Header e Controles */
-        .header { padding: 15px; background: #111; border-bottom: 1px solid #222; }
-        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: #fff; outline: none; }
-        .btn-sync { padding: 14px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
+        /* Header e Busca */
+        header {
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+        .search-container {
+            background: #1a1a1a;
+            border-radius: var(--radius);
+            padding: 5px 15px;
+            display: flex;
+            align-items: center;
+            border: 1px solid #333;
+        }
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            font-size: 16px;
+        }
+
+        /* Navegação principal */
+        .main-nav {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 10px 0;
+        }
+        .nav-item {
+            font-weight: 800;
+            opacity: 0.5;
+            cursor: pointer;
+            padding: 10px;
+            transition: 0.3s;
+        }
+        .nav-item.active {
+            opacity: 1;
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        /* Sub-Categorias (Pílulas) */
+        .sub-nav {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 15px;
+            scrollbar-width: none;
+        }
+        .pill {
+            background: #222;
+            padding: 8px 18px;
+            border-radius: 20px;
+            white-space: nowrap;
+            font-size: 12px;
+            border: 1px solid #333;
+            cursor: pointer;
+        }
+        .pill.active { background: white; color: black; font-weight: bold; }
+
+        /* Grid Otimizado */
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 15px;
+        }
+        .vod-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        .vod-card:active { transform: scale(0.95); }
         
-        /* Tabs e Grid */
-        .main-tabs { display: flex; gap: 10px; margin-top: 15px; }
-        .tab-m { flex: 1; padding: 10px; text-align: center; background: #222; border-radius: 5px; cursor: pointer; opacity: 0.6; }
-        .tab-m.active { opacity: 1; background: var(--primary); color: #000; }
+        .vod-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #1a1a1a; /* Cor de fundo enquanto a imagem não carrega */
+        }
         
-        .nav { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #080808; }
-        .tab { padding: 8px 18px; background: #222; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; }
-        .tab.active { background: #fff; color: #000; font-weight: bold; }
+        .vod-card .title {
+            padding: 8px;
+            font-size: 10px;
+            text-align: center;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
-        .card { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid #1a1a1a; }
-        .card img { width: 100%; height: 150px; object-fit: cover; background: #1a1a1a; }
-        .card .title { font-size: 10px; padding: 8px; text-align: center; height: 35px; display: flex; align-items: center; justify-content: center; }
+        .ep-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 800;
+        }
 
-        #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; padding: 20px; overflow-y: auto; }
-        .ep { padding: 16px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; }
+        /* Modal de Séries */
+        #series-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.98);
+            z-index: 6000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .ep-row {
+            padding: 18px;
+            border-bottom: 1px solid #222;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
     </style>
 </head>
 <body>
 
-    <div id="player-box">
-        <video id="video" controls autoplay playsinline></video>
-        <div class="close-p" onclick="stopPlayer()">FECHAR PLAYER X</div>
+    <div id="loading" class="loading-overlay">
+        <h2 style="color:var(--primary)">STREAM VOD</h2>
+        <button id="syncBtn" onclick="carregarDados()" style="padding:15px 30px; background:var(--primary); color:white; border:none; border-radius:30px; font-weight:800;">CARREGAR LISTA</button>
     </div>
 
-    <div class="header">
-        <div class="input-group">
-            <input type="text" id="m3uUrl" placeholder="Cole aqui o link da sua lista M3U..." value="http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts">
-            <button class="btn-sync" id="syncBtn" onclick="fetchM3U()">CARREGAR LISTA</button>
-            <input type="text" id="search" placeholder="Buscar no catálogo..." oninput="filtrar()">
-        </div>
-
-        <div class="main-tabs">
-            <div id="m-filmes" class="tab-m active" onclick="switchMode('filmes')">FILMES</div>
-            <div id="m-series" class="tab-m" onclick="switchMode('series')">SÉRIES</div>
-        </div>
+    <div id="player-section">
+        <video id="video" controls autoplay></video>
+        <div class="close-player" onclick="pararPlayer()">FECHAR PLAYER X</div>
     </div>
 
-    <div id="tabs" class="nav"></div>
-    <div id="grid" class="grid"></div>
+    <header>
+        <div class="search-container">
+            <input type="text" id="search" class="search-box" placeholder="Pesquisar filmes ou séries..." oninput="buscaRealTime()">
+        </div>
+    </header>
 
-    <div id="modal">
-        <h2 id="m-title" style="color:var(--primary)"></h2>
-        <div id="m-list"></div>
-        <button onclick="closeM()" style="width:100%; padding:15px; background:#333; color:#fff; border:none; border-radius:10px; margin-top:20px;">VOLTAR</button>
+    <div class="main-nav">
+        <div id="tab-filmes" class="nav-item active" onclick="alternar('filmes')">FILMES</div>
+        <div id="tab-series" class="nav-item" onclick="alternar('series')">SÉRIES</div>
+    </div>
+
+    <div id="pills-container" class="sub-nav"></div>
+    <div id="grid" class="content-grid"></div>
+
+    <div id="series-modal">
+        <h2 id="modal-title" style="color:var(--primary)"></h2>
+        <div id="lista-eps"></div>
+        <button onclick="fecharModal()" style="width:100%; padding:15px; background:#333; color:white; border:none; margin-top:20px; border-radius:10px;">VOLTAR</button>
     </div>
 
     <script>
-        let dataStore = { filmes: {}, series: {} };
-        let currentMode = 'filmes';
-        let shakaInstance = null;
-        const PROXY = "https://corsproxy.io/?"; 
+        let catalogo = { filmes: {}, series: {} };
+        let modoAtual = 'filmes';
+        let player = null;
+        const URL_M3U = "http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts";
 
         shaka.polyfill.installAll();
 
-        async function fetchM3U() {
-            const urlInput = document.getElementById('m3uUrl').value;
-            if(!urlInput) return alert("Por favor, cole um link!");
-            
+        async function carregarDados() {
             const btn = document.getElementById('syncBtn');
-            btn.innerText = "Processando...";
+            btn.innerText = "Sincronizando...";
             
             try {
-                const response = await fetch(PROXY + encodeURIComponent(urlInput));
-                const text = await response.text();
+                const res = await fetch(URL_M3U);
+                const data = await res.text();
                 
+                // Regex melhorada para capturar logo e grupo
                 const regex = /#EXTINF:(?:.*?group-title="([^"]*)")?(?:.*?tvg-logo="([^"]*)")?[^,]*,(.*)\n(http[^\n\r]*)/g;
                 let m;
-                dataStore = { filmes: {}, series: {} };
-
-                while ((m = regex.exec(text)) !== null) {
-                    const [_, group, logo, name, link] = m;
-                    const g = group || "Geral";
-                    const gL = g.toLowerCase();
+                
+                while ((m = regex.exec(data)) !== null) {
+                    const [_, grupo, logo, nome, link] = m;
+                    const g = (grupo || "Geral").toLowerCase();
                     
-                    if (gL.includes('serie')) {
-                        let base = name.split(/S\d+|T\d+|TEMP|EP/i)[0].trim();
-                        if (!dataStore.series[g]) dataStore.series[g] = {};
-                        if (!dataStore.series[g][base]) dataStore.series[g][base] = { n: base, l: logo, eps: [] };
-                        dataStore.series[g][base].eps.push({ n: name, u: link });
-                    } else if (gL.includes('filme')) {
-                        if (!dataStore.filmes[g]) dataStore.filmes[g] = [];
-                        dataStore.filmes[g].push({ n: name, l: logo, u: link });
+                    if (g.includes('serie')) {
+                        // Agrupar séries pelo nome base (remove S01, T01, etc)
+                        let nomeBase = nome.split(/S\d+|T\d+|TEMP|EP|S\.|T\./i)[0].trim();
+                        if (!catalogo.series[grupo]) catalogo.series[grupo] = {};
+                        if (!catalogo.series[grupo][nomeBase]) {
+                            catalogo.series[grupo][nomeBase] = { n: nomeBase, l: logo, eps: [] };
+                        }
+                        catalogo.series[grupo][nomeBase].eps.push({ n: nome, u: link });
+                    } else if (g.includes('filme')) {
+                        if (!catalogo.filmes[grupo]) catalogo.filmes[grupo] = [];
+                        catalogo.filmes[grupo].push({ n: nome, l: logo, u: link });
                     }
                 }
-                btn.innerText = "LISTA CARREGADA!";
-                setTimeout(() => btn.innerText = "ATUALIZAR LISTA", 2000);
-                switchMode('filmes');
+                
+                document.getElementById('loading').style.display = 'none';
+                alternar('filmes');
             } catch (e) {
-                alert("Erro ao carregar a lista. Verifique o link ou o proxy.");
+                alert("Erro ao carregar a lista. Verifique a sua ligação.");
                 btn.innerText = "TENTAR NOVAMENTE";
             }
         }
 
-        function switchMode(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.tab-m').forEach(t => t.classList.remove('active'));
-            document.getElementById(`m-${mode}`).classList.add('active');
-            renderTabs(mode);
-        }
-
-        function renderTabs(mode) {
-            const container = document.getElementById('tabs');
+        function alternar(modo) {
+            modoAtual = modo;
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(`tab-${modo}`).classList.add('active');
+            
+            const container = document.getElementById('pills-container');
             container.innerHTML = "";
-            const groups = Object.keys(dataStore[mode]);
-            groups.forEach((g, i) => {
+            const grupos = Object.keys(catalogo[modo]);
+
+            grupos.forEach((grupo, idx) => {
                 const d = document.createElement('div');
-                d.className = `tab ${i === 0 ? 'active' : ''}`;
-                d.innerText = g;
+                d.className = `pill ${idx === 0 ? 'active' : ''}`;
+                d.innerText = grupo;
                 d.onclick = () => {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
                     d.classList.add('active');
-                    renderGrid(dataStore[mode][g]);
+                    renderGrid(catalogo[modo][grupo]);
                 };
                 container.appendChild(d);
             });
-            if (groups.length > 0) renderGrid(dataStore[mode][groups[0]]);
+
+            if (grupos.length > 0) renderGrid(catalogo[modo][grupos[0]]);
         }
 
-        function renderGrid(items) {
+        function renderGrid(itens) {
             const grid = document.getElementById('grid');
             grid.innerHTML = "";
-            const list = currentMode === 'series' ? Object.values(items) : items;
+            const lista = modoAtual === 'series' ? Object.values(itens) : itens;
 
-            list.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <img src="${item.l || ''}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=PlayFlix'">
+            lista.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'vod-card';
+                // Fallback para imagem caso falhe ou não exista
+                const imgUrl = item.l || 'https://via.placeholder.com/300x450/111/333?text=S+Capa';
+                
+                div.innerHTML = `
+                    ${item.eps ? `<div class="ep-badge">${item.eps.length} EPS</div>` : ''}
+                    <img src="${imgUrl}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=Erro+Link'">
                     <div class="title">${item.n}</div>
                 `;
-                card.onclick = () => currentMode === 'series' ? openS(item) : playStream(item.u);
-                grid.appendChild(card);
+                
+                div.onclick = () => modoAtual === 'series' ? abrirSérie(item) : play(item.u);
+                grid.appendChild(div);
             });
         }
 
-        async function playStream(url) {
+        function abrirSérie(s) {
+            document.getElementById('modal-title').innerText = s.n;
+            const lista = document.getElementById('lista-eps');
+            lista.innerHTML = "";
+            s.eps.sort((a,b) => a.n.localeCompare(b.n, undefined, {numeric: true}));
+            
+            s.eps.forEach(ep => {
+                const d = document.createElement('div');
+                d.className = 'ep-row';
+                d.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">ASSISTIR</b>`;
+                d.onclick = () => { fecharModal(); play(ep.u); };
+                lista.appendChild(d);
+            });
+            document.getElementById('series-modal').style.display = 'block';
+        }
+
+        function fecharModal() { document.getElementById('series-modal').style.display = 'none'; }
+
+        async function play(url) {
+            const sec = document.getElementById('player-section');
             const v = document.getElementById('video');
-            document.getElementById('player-box').style.display = 'block';
-            if (shakaInstance) await shakaInstance.destroy();
-            shakaInstance = new shaka.Player(v);
-            try { await shakaInstance.load(url); } catch (e) { v.src = url; }
+            sec.style.display = 'block';
+            
+            if (player) await player.destroy();
+            player = new shaka.Player(v);
+            
+            // Configuração para ignorar erros comuns de DRM em listas públicas
+            player.configure({ streaming: { rebufferingGoal: 10 } });
+
+            try {
+                await player.load(url);
+            } catch (e) {
+                // Se o Shaka falhar, tenta o player nativo do navegador (HLS/Direct)
+                v.src = url;
+                v.play();
+            }
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        function stopPlayer() {
-            document.getElementById('video').pause();
-            document.getElementById('player-box').style.display = 'none';
+        function pararPlayer() {
+            const v = document.getElementById('video');
+            v.pause();
+            v.src = "";
+            document.getElementById('player-section').style.display = 'none';
         }
 
-        function openS(s) {
-            document.getElementById('m-title').innerText = s.n;
-            const list = document.getElementById('m-list');
-            list.innerHTML = "";
-            s.eps.sort((a,b) => a.n.localeCompare(b.n, undefined, {numeric: true}));
-            s.eps.forEach(ep => {
-                const d = document.createElement('div');
-                d.className = 'ep';
-                d.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">PLAY</b>`;
-                d.onclick = () => { closeM(); playStream(ep.u); };
-                list.appendChild(d);
-            });
-            document.getElementById('modal').style.display = 'block';
-        }
-
-        function closeM() { document.getElementById('modal').style.display = 'none'; }
-
-        function filtrar() {
+        function buscaRealTime() {
             const termo = document.getElementById('search').value.toLowerCase();
-            let res = [];
-            if (currentMode === 'filmes') {
-                Object.values(dataStore.filmes).forEach(g => res = res.concat(g.filter(f => f.n.toLowerCase().includes(termo))));
+            let resultados = [];
+            
+            if (modoAtual === 'filmes') {
+                Object.values(catalogo.filmes).forEach(g => {
+                    resultados = resultados.concat(g.filter(f => f.n.toLowerCase().includes(termo)));
+                });
             } else {
-                Object.values(dataStore.series).forEach(g => res = res.concat(Object.values(g).filter(s => s.n.toLowerCase().includes(termo))));
+                Object.values(catalogo.series).forEach(g => {
+                    const seriesArray = Object.values(g);
+                    resultados = resultados.concat(seriesArray.filter(s => s.n.toLowerCase().includes(termo)));
+                });
             }
-            renderGrid(res);
+            renderGrid(resultados);
         }
     </script>
 </body>
