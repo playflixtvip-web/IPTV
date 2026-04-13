@@ -13,25 +13,19 @@
         .container { padding: 20px; max-width: 1100px; margin: auto; }
         .hidden { display: none !important; }
         .box { background: var(--card); padding: 20px; border-radius: 10px; border: 1px solid #333; margin-bottom: 20px; }
-        
         input { width: 100%; padding: 12px; margin: 8px 0; background: #222; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; }
         button { background: var(--red); color: white; border: none; padding: 12px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        
-        /* Grid Estilo Streaming */
         .category-title { margin-top: 30px; color: #fff; font-size: 1.2rem; border-left: 4px solid var(--red); padding-left: 10px; font-weight: bold; }
         .movie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
-        .movie-item { transition: 0.3s; cursor: pointer; background: #1a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid transparent; }
+        .movie-item { transition: 0.3s; cursor: pointer; background: #1a1a1a; border-radius: 5px; overflow: hidden; border: 1px solid transparent; text-align: center; }
         .movie-item:hover { transform: scale(1.05); border-color: var(--red); }
         .movie-item img { width: 100%; height: 190px; object-fit: cover; background: #000; }
-        .movie-name { padding: 5px; font-size: 11px; text-align: center; height: 30px; overflow: hidden; }
-
-        /* Tabela ADM */
+        .movie-name { padding: 5px; font-size: 11px; height: 30px; overflow: hidden; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
         th, td { padding: 10px; border-bottom: 1px solid #333; text-align: left; }
-        
         #player-modal { position: fixed; inset: 0; background: #000; z-index: 9999; display: none; }
         video { width: 100%; height: 100%; }
-        .close-p { position: absolute; top: 20px; right: 20px; background: var(--red); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; z-index: 10001; cursor: pointer; font-weight: bold; }
+        .close-p { position: absolute; top: 20px; right: 20px; background: var(--red); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; z-index: 10001; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -48,10 +42,9 @@
 <div id="scr-adm" class="container hidden">
     <div class="box">
         <h3>Servidor (URL da Lista)</h3>
-        <input type="text" id="m3u-url" placeholder="Cole a URL do servidor aqui...">
-        <button onclick="salvarConfig()" style="background:#27ae60">SALVAR CONFIGURAÇÃO</button>
+        <input type="text" id="m3u-url" placeholder="URL da lista (ex: ctdg.me)">
+        <button onclick="salvarConfig()" style="background:#27ae60">SALVAR URL NO FIREBASE</button>
     </div>
-
     <div class="box">
         <h3>Gerenciar Clientes</h3>
         <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px">
@@ -59,21 +52,21 @@
             <input type="text" id="np" placeholder="Senha">
             <input type="number" id="nd" placeholder="Dias">
         </div>
-        <button onclick="addUser()" style="margin-top:10px">CRIAR NOVO ACESSO</button>
+        <button onclick="addUser()" style="margin-top:10px">CRIAR ACESSO</button>
         <table>
-            <thead><tr><th>Usuário</th><th>Vencimento</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Usuário</th><th>Vencimento</th><th>Ação</th></tr></thead>
             <tbody id="lista-users"></tbody>
         </table>
     </div>
-    <button onclick="location.reload()" style="background:#444">SAIR DO PAINEL</button>
+    <button onclick="location.reload()" style="background:#444">SAIR</button>
 </div>
 
 <div id="scr-user" class="hidden">
-    <div style="padding: 15px; display:flex; justify-content:space-between; align-items:center; background: #000; position: sticky; top:0; z-index:100;">
+    <div style="padding: 15px; background: #000; position: sticky; top:0; z-index:100; display:flex; justify-content:space-between;">
         <h2 style="color:var(--red); margin:0;">PlayFlix</h2>
         <button onclick="location.reload()" style="background:#333">SAIR</button>
     </div>
-    <div id="loading" style="text-align:center; padding:50px;" class="hidden">Carregando catálogo...</div>
+    <div id="loading" style="text-align:center; padding:50px;" class="hidden">Buscando conteúdo do servidor...</div>
     <div id="catalogo" class="container" style="max-width:100%"></div>
 </div>
 
@@ -83,7 +76,7 @@
 </div>
 
 <script>
-// Configuração Firebase (Sua imagem 1000161270.png)
+// Configuração Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyCfl6Gwpult8zt456YtKyiaInDYQuEHFry",
     authDomain: "meuscanais-f21c1.firebaseapp.com",
@@ -98,17 +91,13 @@ const db = firebase.firestore();
 async function autenticar() {
     const u = document.getElementById('user').value;
     const p = document.getElementById('pass').value;
-
-    if(u === "Rhuan" && p === "270412") {
-        abrir('scr-adm');
-        carregarPainelAdm();
-    } else {
+    if(u === "Rhuan" && p === "270412") { abrir('scr-adm'); carregarPainelAdm(); }
+    else {
         const doc = await db.collection("usuarios").doc(u).get();
         if(doc.exists && doc.data().senha === p) {
             if(Date.now() > doc.data().expira) return alert("Acesso vencido!");
-            abrir('scr-user');
-            buscarEShow();
-        } else { alert("Login incorreto!"); }
+            abrir('scr-user'); buscarEShow();
+        } else { alert("Acesso Negado!"); }
     }
 }
 
@@ -121,42 +110,39 @@ function abrir(id) {
 async function salvarConfig() {
     const url = document.getElementById('m3u-url').value;
     await db.collection("config").doc("geral").set({ urlM3U: url });
-    alert("URL do Servidor Atualizada!");
+    alert("URL Salva com sucesso!");
 }
 
 async function carregarPainelAdm() {
     const doc = await db.collection("config").doc("geral").get();
     if(doc.exists) document.getElementById('m3u-url').value = doc.data().urlM3U;
-
     db.collection("usuarios").onSnapshot(snap => {
-        const tb = document.getElementById('lista-users');
-        tb.innerHTML = "";
+        const tb = document.getElementById('lista-users'); tb.innerHTML = "";
         snap.forEach(u => {
-            const dias = Math.ceil((u.data().expira - Date.now()) / (1000*60*60*24));
-            tb.innerHTML += `<tr><td>${u.id}</td><td>${dias} dias</td><td><button onclick="removerU('${u.id}')" style="background:#333; padding:5px">X</button></td></tr>`;
+            const dias = Math.ceil((u.data().expira - Date.now()) / 86400000);
+            tb.innerHTML += `<tr><td>${u.id}</td><td>${dias}d</td><td><button onclick="removerU('${u.id}')">X</button></td></tr>`;
         });
     });
 }
 
 async function addUser() {
-    const u = document.getElementById('nu').value;
-    const p = document.getElementById('np').value;
-    const d = parseInt(document.getElementById('nd').value);
-    const exp = Date.now() + (d * 24 * 60 * 60 * 1000);
+    const u = document.getElementById('nu').value, p = document.getElementById('np').value, d = parseInt(document.getElementById('nd').value);
+    const exp = Date.now() + (d * 86400000);
     await db.collection("usuarios").doc(u).set({ senha: p, expira: exp, status: "ativo" });
-    alert("Usuário Criado!");
+    alert("Criado!");
 }
 
-async function removerU(id) { if(confirm("Remover?")) await db.collection("usuarios").doc(id).delete(); }
+async function removerU(id) { if(confirm("Excluir?")) await db.collection("usuarios").doc(id).delete(); }
 
-// LOGICA DE CARREGAMENTO COM PROXY (Evita tela preta)
+// BUSCA COM PROXY REFORÇADO
 async function buscarEShow() {
     document.getElementById('loading').classList.remove('hidden');
     const doc = await db.collection("config").doc("geral").get();
-    if(!doc.exists || !doc.data().urlM3U) return alert("URL não configurada!");
+    if(!doc.exists) return;
 
     const urlOriginal = doc.data().urlM3U;
-    const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(urlOriginal);
+    // Usamos o AllOrigins para ignorar bloqueio de CORS
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(urlOriginal)}`;
 
     try {
         const response = await fetch(proxyUrl);
@@ -169,10 +155,10 @@ async function buscarEShow() {
 
         blocos.forEach(bloco => {
             if(bloco.includes('http')) {
-                const lines = bloco.split('\n');
-                const info = lines[0];
-                const videoUrl = lines.find(l => l.trim().startsWith('http'))?.trim();
-                const grupo = info.match(/group-title="(.*?)"/)?.[1] || "Diversos";
+                const linhas = bloco.split('\n');
+                const info = linhas[0];
+                const videoUrl = linhas.find(l => l.trim().startsWith('http'))?.trim();
+                const grupo = info.match(/group-title="(.*?)"/)?.[1] || "Geral";
                 const nome = info.split(',')[1]?.trim() || "Conteúdo";
                 const logo = info.match(/tvg-logo="(.*?)"/)?.[1] || "";
 
@@ -180,9 +166,8 @@ async function buscarEShow() {
                 categorias[grupo].push({ nome, url: videoUrl, logo });
             }
         });
-
         renderizar(categorias);
-    } catch (e) { alert("Erro ao carregar lista do servidor."); }
+    } catch (e) { alert("Erro ao conectar com o servidor da lista."); }
     document.getElementById('loading').classList.add('hidden');
 }
 
@@ -207,7 +192,10 @@ function renderizar(categorias) {
 function play(url) {
     const video = document.getElementById('vid');
     document.getElementById('player-modal').style.display = 'block';
-    let finalUrl = url.includes('output=mpegts') ? url.replace('output=mpegts', 'output=m3u8') : url;
+    
+    // Converte links .ts para m3u8 se necessário para maior compatibilidade
+    let finalUrl = url;
+    if(url.includes('output=ts')) finalUrl = url.replace('output=ts', 'output=m3u8');
 
     if(Hls.isSupported()) {
         const hls = new Hls({ xhrSetup: xhr => xhr.withCredentials = false });
