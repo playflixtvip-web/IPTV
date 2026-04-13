@@ -4,59 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
-    <title>PlayFlix VIP</title>
+    <title>PlayFlix VIP Pro</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root { --primary: #00ed51; --bg: #000000; --card: #121212; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #fff; margin: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: #fff; margin: 0; overflow-x: hidden; }
 
         /* Player */
         #player-box { width: 100%; display: none; background: #000; position: sticky; top: 0; z-index: 9999; }
         video { width: 100%; aspect-ratio: 16/9; display: block; }
-        .close-p { background: #ff003c; text-align: center; padding: 10px; font-weight: bold; cursor: pointer; }
+        .close-p { background: #ff003c; text-align: center; padding: 12px; font-weight: bold; cursor: pointer; font-size: 14px; }
 
         /* Header */
-        .header { padding: 15px; background: #111; border-bottom: 1px solid #222; }
-        .btn-sync { width: 100%; padding: 12px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .header { padding: 15px; background: #111; border-bottom: 1px solid #222; position: sticky; top: 0; z-index: 1000; }
+        .btn-sync { width: 100%; padding: 14px; background: var(--primary); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 12px; font-size: 14px; }
         
-        /* Nav */
-        .nav { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #080808; }
-        .tab { padding: 8px 20px; background: #222; border-radius: 20px; font-size: 13px; white-space: nowrap; cursor: pointer; }
-        .tab.active { background: #fff; color: #000; font-weight: bold; }
+        .main-tabs { display: flex; justify-content: space-around; margin-bottom: 15px; background: #1a1a1a; border-radius: 8px; }
+        .tab-m { padding: 12px; flex: 1; text-align: center; font-weight: bold; cursor: pointer; opacity: 0.5; }
+        .tab-m.active { opacity: 1; border-bottom: 2px solid var(--primary); color: var(--primary); }
+
+        /* Nav Categorias */
+        .nav { display: flex; gap: 10px; padding: 10px; overflow-x: auto; background: #080808; scrollbar-width: none; }
+        .nav::-webkit-scrollbar { display: none; }
+        .tab { padding: 8px 18px; background: #222; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; border: 1px solid #333; }
+        .tab.active { background: #fff; color: #000; font-weight: bold; border-color: #fff; }
 
         /* Grid */
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
-        .card { background: var(--card); border-radius: 10px; overflow: hidden; position: relative; border: 1px solid #1a1a1a; }
-        .card img { width: 100%; height: 150px; object-fit: cover; background: #1a1a1a; }
-        .card .title { font-size: 10px; padding: 8px; text-align: center; height: 30px; display: flex; align-items: center; justify-content: center; }
+        .card { background: var(--card); border-radius: 10px; overflow: hidden; position: relative; border: 1px solid #1a1a1a; transition: 0.2s; }
+        .card:active { transform: scale(0.95); }
+        .card img { width: 100%; height: 160px; object-fit: cover; background: #1a1a1a; display: block; }
+        .card .title { font-size: 10px; padding: 8px; text-align: center; height: 35px; display: flex; align-items: center; justify-content: center; line-height: 1.2; }
         
         /* Modal */
         #modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 10000; padding: 20px; overflow-y: auto; }
-        .ep { padding: 15px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .ep { padding: 16px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .ep:active { background: #1a1a1a; }
     </style>
 </head>
 <body>
 
     <div id="player-box">
         <video id="video" controls autoplay playsinline></video>
-        <div class="close-p" onclick="stopPlayer()">FECHAR PLAYER X</div>
+        <div class="close-p" onclick="stopPlayer()">FECHAR PLAYER [X]</div>
     </div>
 
     <div class="header">
-        <button class="btn-sync" id="syncBtn" onclick="fetchM3U()">CARREGAR LISTA AGORA</button>
-        <input type="text" id="search" placeholder="Buscar filmes ou séries..." style="width:100%; padding:12px; border-radius:8px; border:1px solid #333; background:#1a1a1a; color:#fff; box-sizing:border-box;" oninput="search()">
+        <button class="btn-sync" id="syncBtn" onclick="fetchM3U()">SINCRONIZAR CATÁLOGO</button>
+        <input type="text" id="searchInput" placeholder="Buscar filmes ou séries..." style="width:100%; padding:14px; border-radius:8px; border:1px solid #333; background:#1a1a1a; color:#fff; box-sizing:border-box; outline: none;" oninput="filtrar()">
+        
+        <div class="main-tabs" style="margin-top: 15px;">
+            <div id="m-filmes" class="tab-m active" onclick="switchMode('filmes')">FILMES</div>
+            <div id="m-series" class="tab-m" onclick="switchMode('series')">SÉRIES</div>
+        </div>
     </div>
 
     <div id="tabs" class="nav"></div>
     <div id="grid" class="grid"></div>
 
     <div id="modal">
-        <h2 id="m-title" style="color:var(--primary)"></h2>
+        <h2 id="m-title" style="color:var(--primary); margin-top: 0;"></h2>
         <div id="m-list"></div>
-        <button onclick="closeM()" style="width:100%; padding:15px; background:#222; color:#fff; border:none; border-radius:10px; margin-top:20px;">VOLTAR</button>
+        <button onclick="closeM()" style="width:100%; padding:15px; background:#333; color:#fff; border:none; border-radius:10px; margin-top:20px; font-weight: bold;">VOLTAR</button>
     </div>
 
     <script>
@@ -64,7 +76,6 @@
         let currentMode = 'filmes';
         let shakaInstance = null;
         
-        // Proxy para evitar erro de CORS no GitHub Pages
         const PROXY = "https://corsproxy.io/?"; 
         const M3U_URL = "http://bufalov1.fun/get.php?username=91216526&password=41118947&type=m3u_plus&output=mpegts";
 
@@ -72,9 +83,8 @@
 
         async function fetchM3U() {
             const btn = document.getElementById('syncBtn');
-            btn.innerText = "Sincronizando...";
+            btn.innerText = "Lendo lista...";
             try {
-                // Usando proxy para permitir acesso HTTP dentro do GitHub HTTPS
                 const response = await fetch(PROXY + encodeURIComponent(M3U_URL));
                 const text = await response.text();
                 
@@ -84,28 +94,35 @@
 
                 while ((m = regex.exec(text)) !== null) {
                     const [_, group, logo, name, link] = m;
-                    const g = (group || "Outros").toLowerCase();
+                    const g = group || "Geral";
+                    const gLower = g.toLowerCase();
                     
-                    if (g.includes('serie')) {
+                    if (gLower.includes('serie')) {
                         let base = name.split(/S\d+|T\d+|TEMP|EP/i)[0].trim();
-                        if (!dataStore.series[group]) dataStore.series[group] = {};
-                        if (!dataStore.series[group][base]) dataStore.series[group][base] = { n: base, l: logo, eps: [] };
-                        dataStore.series[group][base].eps.push({ n: name, u: link });
-                    } else if (g.includes('filme')) {
-                        if (!dataStore.filmes[group]) dataStore.filmes[group] = [];
-                        dataStore.filmes[group].push({ n: name, l: logo, u: link });
+                        if (!dataStore.series[g]) dataStore.series[g] = {};
+                        if (!dataStore.series[g][base]) dataStore.series[g][base] = { n: base, l: logo, eps: [] };
+                        dataStore.series[g][base].eps.push({ n: name, u: link });
+                    } else if (gLower.includes('filme')) {
+                        if (!dataStore.filmes[g]) dataStore.filmes[g] = [];
+                        dataStore.filmes[g].push({ n: name, l: logo, u: link });
                     }
                 }
                 btn.style.display = 'none';
-                renderTabs('filmes');
+                switchMode('filmes');
             } catch (e) {
-                alert("Erro ao carregar. Tente novamente em instantes.");
-                btn.innerText = "CARREGAR LISTA AGORA";
+                alert("Erro de conexão. Verifique sua internet.");
+                btn.innerText = "TENTAR NOVAMENTE";
             }
         }
 
-        function renderTabs(mode) {
+        function switchMode(mode) {
             currentMode = mode;
+            document.querySelectorAll('.tab-m').forEach(t => t.classList.remove('active'));
+            document.getElementById(`m-${mode}`).classList.add('active');
+            renderTabs(mode);
+        }
+
+        function renderTabs(mode) {
             const container = document.getElementById('tabs');
             container.innerHTML = "";
             const groups = Object.keys(dataStore[mode]);
@@ -131,10 +148,10 @@
             list.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                // Usando Referrer Policy para carregar a capa
-                const img = item.l || 'https://via.placeholder.com/300x450/111/333?text=PlayFlix';
+                // Adicionado no-referrer via atributo também para garantir as capas
+                const imgUrl = item.l || 'https://via.placeholder.com/300x450/111/333?text=VOD';
                 card.innerHTML = `
-                    <img src="${img}" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=Erro+Capa'">
+                    <img src="${imgUrl}" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/300x450/111/333?text=Erro+Capa'">
                     <div class="title">${item.n}</div>
                 `;
                 card.onclick = () => currentMode === 'series' ? openS(item) : playStream(item.u);
@@ -150,7 +167,7 @@
             try { 
                 await shakaInstance.load(url); 
             } catch (e) { 
-                v.src = url; // Fallback para .ts
+                v.src = url; 
             }
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
@@ -168,7 +185,7 @@
             s.eps.forEach(ep => {
                 const d = document.createElement('div');
                 d.className = 'ep';
-                d.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">ASSISTIR</b>`;
+                d.innerHTML = `<span>${ep.n}</span> <b style="color:var(--primary)">PLAY</b>`;
                 d.onclick = () => { closeM(); playStream(ep.u); };
                 list.appendChild(d);
             });
@@ -176,6 +193,24 @@
         }
 
         function closeM() { document.getElementById('modal').style.display = 'none'; }
+
+        // Função de busca corrigida
+        function filtrar() {
+            const termo = document.getElementById('searchInput').value.toLowerCase();
+            let filtrados = [];
+            
+            if (currentMode === 'filmes') {
+                Object.values(dataStore.filmes).forEach(grupo => {
+                    filtrados = filtrados.concat(grupo.filter(f => f.n.toLowerCase().includes(termo)));
+                });
+            } else {
+                Object.values(dataStore.series).forEach(grupo => {
+                    const seriesArray = Object.values(grupo);
+                    filtrados = filtrados.concat(seriesArray.filter(s => s.n.toLowerCase().includes(termo)));
+                });
+            }
+            renderGrid(filtrados);
+        }
     </script>
 </body>
 </html>
