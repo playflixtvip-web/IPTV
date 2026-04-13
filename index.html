@@ -3,134 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream VOD - MODO OFFLINE/LOCAL</title>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <title>ADM - Gerenciador Streaming</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
     <style>
-        :root { --red: #e50914; --black: #050505; --gray: #1a1a1a; }
-        body { background: var(--black); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        :root { --red: #e50914; --dark: #0a0a0a; --card: #141414; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: white; margin: 0; }
         
-        /* Área de Colar a Lista */
-        #setup-screen { padding: 20px; text-align: center; }
-        textarea { 
-            width: 100%; height: 200px; background: #111; color: #0f0; 
-            border: 1px solid #333; border-radius: 8px; font-family: monospace; font-size: 10px;
-            margin-bottom: 15px; padding: 10px; box-sizing: border-box;
-        }
-        
-        .btn-action { 
-            background: var(--red); color: white; border: none; padding: 15px; 
-            border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer;
-        }
+        /* Telas */
+        .screen { display: none; padding: 20px; }
+        .active { display: block; }
 
-        /* Grid de Conteúdo */
-        #main-content { display: none; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 15px; }
-        .card { background: var(--gray); border-radius: 8px; overflow: hidden; text-align: center; font-size: 11px; }
-        .card img { width: 100%; height: 150px; object-fit: cover; background: #222; }
-        .card div { padding: 5px; height: 30px; overflow: hidden; }
+        /* Login */
+        .login-box { max-width: 350px; margin: 100px auto; background: var(--card); padding: 30px; border-radius: 10px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #333; border: none; color: white; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--red); color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
-        /* Player */
-        #player-box { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; }
-        video { width: 100%; height: auto; aspect-ratio: 16/9; }
-        .close-btn { background: var(--red); padding: 15px; text-align: center; font-weight: bold; cursor: pointer; }
+        /* Dashboard */
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .tab-btn { background: none; border: 1px solid #444; width: auto; padding: 8px 20px; font-size: 14px; }
+        .tab-btn.active-tab { background: var(--red); border-color: var(--red); }
+
+        /* Tabelas/Lista */
+        .user-card { background: var(--card); padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444; }
+        .status-ativo { border-left-color: #2ecc71; }
+        .status-suspenso { border-left-color: #e74c3c; }
+        .actions { display: flex; gap: 5px; }
+        .btn-sm { padding: 5px 10px; font-size: 11px; width: auto; }
+        textarea { width: 100%; height: 200px; background: #111; color: #0f0; border: 1px solid #333; padding: 10px; }
     </style>
 </head>
 <body>
 
-<div id="setup-screen">
-    <h2 style="color:var(--red)">INJETOR DE LISTA LOCAL</h2>
-    <p style="font-size: 12px; color: #aaa;">Baixe sua lista .m3u, abra como texto, copie tudo e cole abaixo:</p>
-    <textarea id="raw-data" placeholder="Cole aqui o conteúdo do seu arquivo M3U..."></textarea>
-    <button class="btn-action" onclick="injetarLista()">INJETAR E ABRIR APP</button>
-</div>
-
-<div id="main-content">
-    <div style="padding: 15px; background: #111; display: flex; gap: 10px;">
-        <input type="text" id="search" placeholder="Buscar..." oninput="filtrar()" style="flex:1; padding:10px; background:#222; border:1px solid #444; color:white; border-radius:5px;">
-        <button onclick="location.reload()" style="background:#444; border:none; color:white; padding:10px; border-radius:5px;">Sair</button>
+    <div id="login-screen" class="screen active">
+        <div class="login-box">
+            <h2 style="color:var(--red)">ADM LOGIN</h2>
+            <input type="text" id="admUser" placeholder="Usuário">
+            <input type="password" id="admPass" placeholder="Senha">
+            <button onclick="checkLogin()">ENTRAR NO PAINEL</button>
+        </div>
     </div>
-    <div class="grid" id="grid"></div>
-</div>
 
-<div id="player-box">
-    <video id="video-player" controls autoplay></video>
-    <div class="close-btn" onclick="fecharPlayer()">FECHAR PLAYER X</div>
-</div>
+    <div id="admin-panel" class="screen">
+        <div style="display:flex; justify-content: space-between; align-items: center;">
+            <h2>Gerenciador Pro</h2>
+            <button class="btn-sm" onclick="location.reload()" style="background:#444">SAIR</button>
+        </div>
 
-<script>
-    let bancoDados = [];
+        <div class="nav-tabs">
+            <button class="tab-btn active-tab" onclick="switchAdmin('tab-lista')">LISTA M3U</button>
+            <button class="tab-btn" onclick="switchAdmin('tab-users')">USUÁRIOS</button>
+        </div>
 
-    function injetarLista() {
-        const raw = document.getElementById('raw-data').value;
-        if (!raw.includes('#EXTM3U')) return alert("Isso não parece uma lista M3U válida!");
+        <div id="tab-lista" class="admin-tab">
+            <h3>Editor da Lista Principal</h3>
+            <textarea id="m3uContent" placeholder="Cole o conteúdo da lista aqui..."></textarea>
+            <button onclick="saveM3U()">SALVAR E ATUALIZAR LISTA</button>
+        </div>
 
-        bancoDados = [];
-        const blocos = raw.split('#EXTINF:');
-        
-        blocos.forEach(bloco => {
-            if (bloco.includes('http')) {
-                const linhas = bloco.split('\n');
-                const info = linhas[0];
-                const link = linhas.find(l => l.trim().startsWith('http'))?.trim();
-                const nome = info.split(',')[1]?.trim() || "Sem Nome";
-                const logo = info.match(/tvg-logo="(.*?)"/)?.[1] || "";
+        <div id="tab-users" class="admin-tab" style="display:none">
+            <div style="background:#222; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <h4>Novo Usuário</h4>
+                <input type="text" id="newUserName" placeholder="Nome do Cliente" style="width:48%">
+                <input type="number" id="newUserDays" placeholder="Dias de Acesso" style="width:48%">
+                <button onclick="addUser()" style="background:#27ae60">CADASTRAR CLIENTE</button>
+            </div>
+            <div id="userList">
+                </div>
+        </div>
+    </div>
 
-                if (link) {
-                    bancoDados.push({ n: nome, l: logo, u: link });
-                }
+    <script>
+        // CONFIGURAÇÃO FIREBASE (Substitua pelos seus dados do console Firebase)
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
+            authDomain: "SEU_PROJETO.firebaseapp.com",
+            projectId: "SEU_PROJETO",
+            storageBucket: "SEU_PROJETO.appspot.com",
+            messagingSenderId: "ID",
+            appId: "APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Login Fixo solicitado
+        function checkLogin() {
+            const user = document.getElementById('admUser').value;
+            const pass = document.getElementById('admPass').value;
+            
+            if(user === "Rhuan" && pass === "270412") {
+                document.getElementById('login-screen').classList.remove('active');
+                document.getElementById('admin-panel').classList.add('active');
+                loadData();
+            } else {
+                alert("Acesso negado!");
             }
-        });
-
-        if (bancoDados.length > 0) {
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            renderizar(bancoDados);
-        } else {
-            alert("Nenhum link encontrado na lista colada.");
         }
-    }
 
-    function renderizar(lista) {
-        const grid = document.getElementById('grid');
-        grid.innerHTML = "";
-        lista.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `
-                <img src="${item.l}" onerror="this.src='https://via.placeholder.com/150x200?text=VOD'">
-                <div>${item.n.substring(0, 30)}</div>
-            `;
-            div.onclick = () => play(item.u);
-            grid.appendChild(div);
-        });
-    }
-
-    function play(url) {
-        const box = document.getElementById('player-box');
-        const v = document.getElementById('video-player');
-        box.style.display = 'block';
-        
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(url);
-            hls.attachMedia(v);
-        } else {
-            v.src = url;
+        function switchAdmin(id) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+            event.target.classList.add('active-tab');
         }
-    }
 
-    function fecharPlayer() {
-        const v = document.getElementById('video-player');
-        v.pause();
-        v.src = "";
-        document.getElementById('player-box').style.display = 'none';
-    }
+        // --- FUNÇÕES DA LISTA ---
+        async function saveM3U() {
+            const content = document.getElementById('m3uContent').value;
+            await db.collection("config").doc("mainList").set({ data: content });
+            alert("Lista salva no Firebase!");
+        }
 
-    function filtrar() {
-        const termo = document.getElementById('search').value.toLowerCase();
-        const filtrados = bancoDados.filter(i => i.n.toLowerCase().includes(termo));
-        renderizar(filtrados);
-    }
-</script>
+        async function loadData() {
+            // Carregar M3U
+            const doc = await db.collection("config").doc("mainList").get();
+            if(doc.exists) document.getElementById('m3uContent').value = doc.data().data;
+            
+            // Carregar Usuários
+            loadUsers();
+        }
+
+        // --- FUNÇÕES DE USUÁRIOS ---
+        async function addUser() {
+            const name = document.getElementById('newUserName').value;
+            const days = parseInt(document.getElementById('newUserDays').value);
+            const vencimento = new Date();
+            vencimento.setDate(vencimento.getDate() + days);
+
+            await db.collection("usuarios").add({
+                nome: name,
+                expira: vencimento.getTime(),
+                status: "ativo"
+            });
+            loadUsers();
+        }
+
+        async function loadUsers() {
+            const snapshot = await db.collection("usuarios").get();
+            const list = document.getElementById('userList');
+            list.innerHTML = "";
+            
+            snapshot.forEach(doc => {
+                const u = doc.data();
+                const resto = Math.ceil((u.expira - new Date().getTime()) / (1000*60*60*24));
+                
+                const div = document.createElement('div');
+                div.className = `user-card status-${u.status}`;
+                div.innerHTML = `
+                    <div>
+                        <b>${u.nome}</b><br>
+                        <small>${resto > 0 ? resto + ' dias restantes' : 'Expirado'}</small>
+                    </div>
+                    <div class="actions">
+                        <button class="btn-sm" onclick="addDays('${doc.id}', 30)" style="background:#2980b9">+30 dias</button>
+                        <button class="btn-sm" onclick="toggleStatus('${doc.id}', '${u.status}')" style="background:#f39c12">
+                            ${u.status === 'ativo' ? 'Suspender' : 'Ativar'}
+                        </button>
+                        <button class="btn-sm" onclick="deleteUser('${doc.id}')" style="background:#c0392b">X</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        async function addDays(id, days) {
+            const ref = db.collection("usuarios").doc(id);
+            const doc = await ref.get();
+            const novaData = new Date(doc.data().expira);
+            novaData.setDate(novaData.getDate() + days);
+            await ref.update({ expira: novaData.getTime(), status: 'ativo' });
+            loadUsers();
+        }
+
+        async function toggleStatus(id, current) {
+            const newStatus = current === 'ativo' ? 'suspenso' : 'ativo';
+            await db.collection("usuarios").doc(id).update({ status: newStatus });
+            loadUsers();
+        }
+
+        async function deleteUser(id) {
+            if(confirm("Excluir usuário?")) {
+                await db.collection("usuarios").doc(id).delete();
+                loadUsers();
+            }
+        }
+    </script>
 </body>
 </html>
