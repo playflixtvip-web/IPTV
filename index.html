@@ -3,183 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream VOD Pro - Cloneflix</title>
-    
+    <title>Stream VOD - Cloneflix</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-    
     <style>
-        :root { --primary: #e50914; --bg: #050505; --surface: #121212; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; margin: 0; padding-bottom: 30px; }
+        :root { --primary: #e50914; --bg: #050505; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; text-align: center; }
         
-        /* Login/Setup */
-        #setup-screen {
-            position: fixed; inset: 0; background: var(--bg);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000;
-            padding: 20px; text-align: center;
-        }
-        .login-box { width: 100%; max-width: 400px; background: var(--surface); padding: 40px 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        input[type="text"] { width: 100%; padding: 15px; margin: 20px 0; border-radius: 5px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; }
+        /* Tela de Login para inserir a lista */
+        #login { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .box { background: #121212; padding: 40px; border-radius: 10px; width: 90%; max-width: 400px; }
+        input { width: 100%; padding: 12px; margin: 20px 0; border-radius: 5px; border: 1px solid #333; background: #000; color: white; box-sizing: border-box; }
         
-        /* Header */
-        header { display: none; position: sticky; top: 0; background: linear-gradient(black, transparent); padding: 20px; z-index: 100; text-align: center; }
-        .nav { display: flex; justify-content: center; gap: 30px; margin-bottom: 15px; }
-        .nav-item { cursor: pointer; opacity: 0.6; font-weight: bold; transition: 0.3s; }
-        .nav-item.active { opacity: 1; color: var(--primary); border-bottom: 3px solid var(--primary); }
-        
-        /* Filtros */
-        .pills { display: flex; gap: 10px; overflow-x: auto; padding: 10px 20px; scrollbar-width: none; }
-        .pill { background: #222; padding: 10px 20px; border-radius: 25px; white-space: nowrap; font-size: 13px; cursor: pointer; border: 1px solid #333; }
-        .pill.active { background: white; color: black; font-weight: bold; }
-        
-        /* Grid */
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 15px; }
-        .card { background: var(--surface); border-radius: 10px; overflow: hidden; aspect-ratio: 2/3; position: relative; transition: 0.3s; }
-        .card:active { transform: scale(0.95); }
+        /* Layout do App */
+        header { display: none; padding: 20px; position: sticky; top: 0; background: black; z-index: 100; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 15px; }
+        .card { background: #121212; border-radius: 8px; overflow: hidden; aspect-ratio: 2/3; }
         .card img { width: 100%; height: 100%; object-fit: cover; }
-        .card-title { position: absolute; bottom: 0; width: 100%; padding: 8px; background: rgba(0,0,0,0.8); font-size: 11px; text-align: center; font-weight: bold; }
-
-        /* Player */
-        #player-view { display: none; position: fixed; inset: 0; background: #000; z-index: 5000; }
-        video { width: 100%; height: 80vh; background: #000; }
+        
+        #player { display: none; position: fixed; inset: 0; background: black; z-index: 2000; }
+        video { width: 100%; height: 80vh; }
     </style>
 </head>
 <body>
 
-    <div id="setup-screen">
-        <div class="login-box">
-            <h1 style="color:var(--primary); margin:0;">CLONEFLIX</h1>
-            <p style="color:#888; font-size: 14px; margin-top: 10px;">Cole sua lista M3U abaixo</p>
-            <input type="text" id="m3u-url" placeholder="http://servidor.com/get.php?..." value="">
-            <button onclick="carregarLista()" id="btn-sync" style="width:100%; padding:16px; background:var(--primary); color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">ACESSAR CONTEÚDO</button>
+    <div id="login">
+        <div class="box">
+            <h1 style="color:var(--primary)">CLONEFLIX</h1>
+            <input type="text" id="url-m3u" placeholder="Cole o link da sua lista M3U aqui">
+            <button onclick="carregar()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:5px; font-weight:bold; cursor:pointer;">ENTRAR</button>
         </div>
     </div>
 
-    <header id="app-header">
-        <div class="nav">
-            <div id="tab-filmes" class="nav-item active" onclick="mudarModo('filmes')">FILMES</div>
-            <div id="tab-series" class="nav-item" onclick="mudarModo('series')">SÉRIES</div>
-        </div>
-        <div id="pills-box" class="pills"></div>
+    <header id="header">
+        <h2 style="color:var(--primary)">MEU VOD</h2>
     </header>
 
-    <div id="grid-container" class="grid"></div>
+    <div id="grid" class="grid"></div>
 
-    <div id="player-view">
-        <video id="main-video" controls autoplay></video>
-        <button onclick="fecharPlayer()" style="width:100%; padding:20px; background:var(--primary); color:white; border:none; font-weight:bold; cursor:pointer;">FECHAR E VOLTAR</button>
+    <div id="player">
+        <video id="video" controls autoplay></video>
+        <button onclick="fechar()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none;">VOLTAR</button>
     </div>
 
     <script>
-        // Proxy para evitar erro de CORS (Bloqueio do Navegador no GitHub)
+        // Proxy para evitar o erro de conexão (CORS) no GitHub Pages
         const PROXY = "https://api.allorigins.win/raw?url=";
-        let catalogo = { filmes: {}, series: {} };
-        let modoAtivo = 'filmes';
-        let shakaPlayer = null;
+        let playerShaka = null;
 
-        async function carregarLista() {
-            const url = document.getElementById('m3u-url').value.trim();
-            const btn = document.getElementById('btn-sync');
-            
-            if(!url) return alert("Por favor, cole um link válido!");
-
-            btn.innerText = "Sincronizando Lista...";
-            btn.disabled = true;
+        async function carregar() {
+            const url = document.getElementById('url-m3u').value;
+            if(!url) return alert("Insira um link!");
 
             try {
-                // Busca a lista através do Proxy para não dar erro de tela preta
                 const res = await fetch(PROXY + encodeURIComponent(url));
-                if(!res.ok) throw new Error();
                 const data = await res.text();
                 
-                parsear(data);
+                parse(data);
                 
-                document.getElementById('setup-screen').style.display = 'none';
-                document.getElementById('app-header').style.display = 'block';
-                mudarModo('filmes');
+                document.getElementById('login').style.display = 'none';
+                document.getElementById('header').style.display = 'block';
             } catch (e) {
-                alert("Erro ao carregar! Verifique se o link da lista está correto.");
-                btn.innerText = "ACESSAR CONTEÚDO";
-                btn.disabled = false;
+                alert("Erro ao carrergar lista. Verifique o link.");
             }
         }
 
-        function parsear(data) {
-            const regex = /#EXTINF:(?:.*?group-title="([^"]*)")?(?:.*?tvg-logo="([^"]*)")?[^,]*,(.*)\n(http[^\n\r]*)/g;
+        function parse(data) {
+            const grid = document.getElementById('grid');
+            const regex = /#EXTINF:.*tvg-logo="([^"]*)".*,(.*)\n(http[^\n\r]*)/g;
             let m;
             while ((m = regex.exec(data)) !== null) {
-                const [_, grupo, logo, nome, link] = m;
-                const gNome = grupo || "Geral";
-                const lowerG = gNome.toLowerCase();
-
-                if (lowerG.includes('serie')) {
-                    let base = nome.split(/S\d+|T\d+|EP/i)[0].trim();
-                    if (!catalogo.series[gNome]) catalogo.series[gNome] = {};
-                    if (!catalogo.series[gNome][base]) catalogo.series[gNome][base] = { n: base, l: logo, eps: [] };
-                    catalogo.series[gNome][base].eps.push({ n: nome, u: link });
-                } else {
-                    if (!catalogo.filmes[gNome]) catalogo.filmes[gNome] = [];
-                    catalogo.filmes[gNome].push({ n: nome, l: logo, u: link });
-                }
+                const [_, logo, nome, link] = m;
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `<img src="${logo}" onerror="this.src='https://via.placeholder.com/200x300?text=VOD'">`;
+                div.onclick = () => play(link);
+                grid.appendChild(div);
             }
         }
 
-        function mudarModo(m) {
-            modoAtivo = m;
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.getElementById(`tab-${m}`).classList.add('active');
-            
-            const pBox = document.getElementById('pills-box');
-            pBox.innerHTML = "";
-            const grupos = Object.keys(catalogo[m]);
-
-            grupos.forEach((g, idx) => {
-                const p = document.createElement('div');
-                p.className = `pill ${idx === 0 ? 'active' : ''}`;
-                p.innerText = g;
-                p.onclick = () => {
-                    document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
-                    p.classList.add('active');
-                    renderGrid(catalogo[m][g]);
-                };
-                pBox.appendChild(p);
-            });
-            if(grupos.length > 0) renderGrid(catalogo[m][grupos[0]]);
+        async function play(url) {
+            document.getElementById('player').style.display = 'block';
+            const v = document.getElementById('video');
+            if (playerShaka) await playerShaka.destroy();
+            playerShaka = new shaka.Player(v);
+            try { await playerShaka.load(url); } catch (e) { v.src = url; }
         }
 
-        function renderGrid(itens) {
-            const grid = document.getElementById('grid-container');
-            grid.innerHTML = "";
-            const lista = modoAtivo === 'series' ? Object.values(itens) : itens;
-
-            lista.forEach(item => {
-                const div = document.createElement('div');
-                div.className = 'card';
-                const imgUrl = item.l || 'https://via.placeholder.com/200x300?text=Sem+Capa';
-                div.innerHTML = `
-                    <img src="${imgUrl}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=VOD'">
-                    <div class="card-title">${item.n}</div>
-                `;
-                div.onclick = () => tocar(item.u || item.eps[0].u);
-                grid.appendChild(div);
-            });
-        }
-
-        async function tocar(url) {
-            document.getElementById('player-view').style.display = 'block';
-            const v = document.getElementById('main-video');
-            if (shakaPlayer) await shakaPlayer.destroy();
-            shakaPlayer = new shaka.Player(v);
-            try { await shakaPlayer.load(url); } catch (e) { v.src = url; }
-            window.scrollTo(0, 0);
-        }
-
-        function fecharPlayer() {
-            const v = document.getElementById('main-video');
+        function fechar() {
+            const v = document.getElementById('video');
             v.pause(); v.src = "";
-            document.getElementById('player-view').style.display = 'none';
+            document.getElementById('player').style.display = 'none';
         }
-
         shaka.polyfill.installAll();
     </script>
 </body>
