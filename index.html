@@ -3,376 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stream VOD Elite - Estilo Netflix</title>
+    <title>Stream VOD Elite</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --netflix-red: #e50914;
-            --bg-dark: #141414;
-            --card-bg: #2f2f2f;
-            --text-main: #ffffff;
-            --text-gray: #b3b3b3;
+            --n-red: #e50914;
+            --n-black: #141414;
+            --n-gray: #808080;
         }
 
         body {
             font-family: 'Roboto', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            overflow-x: hidden;
-        }
-
-        /* Header Fixa */
-        header {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.9) 10%, transparent);
-            padding: 15px 4%;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-sizing: border-box;
-        }
-
-        .logo {
-            color: var(--netflix-red);
-            font-size: 22px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 20px;
-            margin-left: 20px;
-        }
-
-        .nav-link {
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--text-gray);
-            transition: 0.3s;
-        }
-
-        .nav-link.active { color: #fff; font-weight: bold; border-bottom: 2px solid var(--netflix-red); }
-
-        /* Categorias (Pills) */
-        .categories-scroll {
-            padding: 90px 4% 10px 4%;
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-        .categories-scroll::-webkit-scrollbar { display: none; }
-
-        .category-pill {
-            background: rgba(255,255,255,0.1);
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
-            white-space: nowrap;
-            cursor: pointer;
-            border: 1px solid transparent;
-        }
-
-        .category-pill.active { background: #fff; color: #000; font-weight: bold; }
-
-        /* Grid de Conteúdo */
-        .content-section { padding: 20px 4%; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 15px;
-        }
-
-        .card {
-            position: relative;
-            border-radius: 4px;
-            overflow: hidden;
-            transition: transform 0.3s;
-            cursor: pointer;
-            aspect-ratio: 2/3;
-            background: #222;
-        }
-
-        .card:hover { transform: scale(1.08); z-index: 5; }
-        .card img { width: 100%; height: 100%; object-fit: cover; }
-        
-        .card-info {
-            position: absolute;
-            bottom: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.9));
-            width: 100%;
-            padding: 8px;
-            font-size: 10px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        /* Player Fullscreen */
-        #player-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: #000;
-            z-index: 9999;
-        }
-        video { width: 100%; height: 100vh; }
-        .close-vid {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.6);
+            background-color: var(--n-black);
             color: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 10001;
-            font-weight: bold;
-        }
-
-        /* Modal de Episódios */
-        #series-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.98);
-            z-index: 8000;
-            padding: 40px 5%;
-            overflow-y: auto;
-        }
-
-        .ep-row {
-            padding: 15px;
-            border-bottom: 1px solid #333;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            margin: 0;
+            user-select: none;
         }
 
         /* Login Screen */
         #login-screen {
             position: fixed;
             inset: 0;
-            background: var(--bg-dark);
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://assets.nflxext.com/ffe/siteui/vlv3/f841d4c7-10e1-40af-bca1-0744f902144f/95958564-984e-4f76-857e-3c81e285d03c/BR-pt-20220502-popsignuptwoweeks-perspective_alpha_website_large.jpg');
+            background-size: cover;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             z-index: 10000;
         }
+
+        .login-card {
+            background: rgba(0,0,0,0.75);
+            padding: 60px;
+            border-radius: 8px;
+            text-align: center;
+            width: 300px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(to bottom, rgba(0,0,0,1), transparent);
+            padding: 20px 4%;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .nav-link {
+            margin-left: 20px;
+            cursor: pointer;
+            color: #e5e5e5;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-link.active { font-weight: bold; color: white; }
+
+        /* Content */
+        .main-container { padding: 80px 4% 20px; display: none; }
+
+        .cat-row {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 20px 0;
+            scrollbar-width: none;
+        }
+
+        .pill {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 20px;
+            border-radius: 20px;
+            white-space: nowrap;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .pill.active { background: white; color: black; font-weight: bold; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            transition: transform 0.3s;
+            cursor: pointer;
+            border-radius: 4px;
+            overflow: hidden;
+            aspect-ratio: 2/3;
+            background: #222;
+        }
+
+        .card:hover { transform: scale(1.1); z-index: 10; }
+
+        .card img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Modal Episódios */
+        #modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 9000;
+            padding: 50px 10%;
+            overflow-y: auto;
+        }
+
+        .ep-item {
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Player */
+        #player-box {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: black;
+            z-index: 10001;
+        }
     </style>
 </head>
 <body>
 
     <div id="login-screen">
-        <div class="logo" style="font-size: 40px; margin-bottom: 10px;">STREAM VOD</div>
-        <div style="color: var(--text-gray); margin-bottom: 30px;">Conta: 21467491</div>
-        <button onclick="carregarLista()" id="btn-sync" style="padding: 15px 50px; background: var(--netflix-red); color: white; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 16px;">
-            ENTRAR NA LISTA
-        </button>
+        <div class="login-card">
+            <h1 style="color:var(--n-red)">NETFLIX</h1>
+            <p style="color:gray">Usuário: 21467491</p>
+            <button onclick="carregar()" id="btn" style="width:100%; padding:15px; background:var(--n-red); color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer">ENTRAR</button>
+        </div>
     </div>
 
-    <header id="main-header" style="display: none;">
-        <div style="display: flex; align-items: center;">
-            <div class="logo">VOD</div>
-            <div class="nav-links">
-                <span id="nav-f" class="nav-link active" onclick="trocarModo('filmes')">Filmes</span>
-                <span id="nav-s" class="nav-link" onclick="trocarModo('series')">Séries</span>
-            </div>
-        </div>
-        <input type="text" placeholder="Buscar..." oninput="buscar(this.value)" style="background: rgba(0,0,0,0.5); border: 1px solid #555; color: white; padding: 5px 10px; border-radius: 4px; outline: none;">
+    <header id="header" style="display:none">
+        <h2 style="color:var(--n-red); margin:0">VOD</h2>
+        <span class="nav-link active" id="tab-f" onclick="setModo('filmes')">Filmes</span>
+        <span class="nav-link" id="tab-s" onclick="setModo('series')">Séries</span>
     </header>
 
-    <div id="container-geral" style="display: none;">
-        <div id="lista-categorias" class="categories-scroll"></div>
-        <div class="content-section">
-            <h3 id="titulo-categoria">Carregando...</h3>
-            <div id="grid-principal" class="grid"></div>
-        </div>
+    <div class="main-container" id="main">
+        <div id="pills" class="cat-row"></div>
+        <h2 id="cat-title"></h2>
+        <div id="grid" class="grid"></div>
     </div>
 
-    <div id="series-modal">
-        <button onclick="fecharModal()" style="background: var(--netflix-red); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 20px;">← VOLTAR</button>
-        <h1 id="modal-nome-serie" style="color: white; margin-bottom: 30px;"></h1>
-        <div id="lista-episodios"></div>
+    <div id="modal">
+        <button onclick="fecharModal()" style="padding:10px; background:var(--n-red); color:white; border:none; margin-bottom:20px">VOLTAR</button>
+        <h2 id="m-title"></h2>
+        <div id="m-list"></div>
     </div>
 
-    <div id="player-overlay">
-        <div class="close-vid" onclick="pararVideo()">VOLTAR</div>
-        <video id="meu-video" controls autoplay></video>
+    <div id="player-box">
+        <button onclick="fecharPlayer()" style="position:absolute; top:20px; left:20px; z-index:10; background:rgba(0,0,0,0.5); color:white; border:none; padding:10px 20px; cursor:pointer">← VOLTAR</button>
+        <video id="video" style="width:100%; height:100vh" controls autoplay></video>
     </div>
 
     <script>
-        // SEU NOVO LINK ATUALIZADO
-        const M3U_URL = "http://bufalov6.shop/get.php?username=21467491&password=79853258&type=m3u_plus&output=mpegts";
+        // Solução para o erro da imagem: Usando proxy para evitar bloqueio CORS
+        const PROXY = "https://api.allorigins.win/raw?url=";
+        const URL_ORIGINAL = "http://bufalov6.shop/get.php?username=21467491&password=79853258&type=m3u_plus&output=mpegts";
+        
+        let db = { filmes: {}, series: {} };
+        let modo = 'filmes';
+        let shakaInstance = null;
 
-        let bancoDeDados = { filmes: {}, series: {} };
-        let modoAtual = 'filmes';
-        let shakaPlayer = null;
-
-        async function carregarLista() {
-            const btn = document.getElementById('btn-sync');
+        async function carregar() {
+            const btn = document.getElementById('btn');
             btn.innerText = "Sincronizando...";
             
             try {
-                const response = await fetch(M3U_URL);
-                if(!response.ok) throw new Error();
-                const data = await response.text();
+                // Aqui o segredo: enviamos a requisição através do Proxy
+                const res = await fetch(PROXY + encodeURIComponent(URL_ORIGINAL));
+                const data = await res.text();
                 
-                processarM3U(data);
+                parse(data);
                 
                 document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-header').style.display = 'flex';
-                document.getElementById('container-geral').style.display = 'block';
-                
-                renderizarInterface();
+                document.getElementById('header').style.display = 'flex';
+                document.getElementById('main').style.display = 'block';
+                render();
             } catch (e) {
-                alert("Erro ao conectar. Tente novamente em instantes.");
+                alert("Erro de conexão. O servidor da lista pode estar instável ou bloqueando o acesso.");
                 btn.innerText = "TENTAR NOVAMENTE";
             }
         }
 
-        function processarM3U(texto) {
-            const linhas = texto.split('\n');
-            let metaAtual = null;
+        function parse(text) {
+            const lines = text.split('\n');
+            let current = null;
 
-            linhas.forEach(linha => {
-                if (linha.startsWith('#EXTINF:')) {
-                    const grupo = linha.match(/group-title="([^"]*)"/)?.[1] || "Geral";
-                    const capa = linha.match(/tvg-logo="([^"]*)"/)?.[1] || "";
-                    const nome = linha.split(',')[1]?.trim() || "Sem Nome";
-                    metaAtual = { grupo, capa, nome };
-                } else if (linha.startsWith('http') && metaAtual) {
-                    const g = metaAtual.group.toLowerCase();
-                    const url = linha.trim();
-
-                    if (g.includes('serie') || g.includes('episódio')) {
-                        // Agrupar por nome da série
-                        let nomeBase = metaAtual.name.split(/S\d+|T\d+|TEMP|EP/i)[0].trim();
-                        if (!bancoDeDados.series[metaAtual.group]) bancoDeDados.series[metaAtual.group] = {};
-                        if (!bancoDeDados.series[metaAtual.group][nomeBase]) {
-                            bancoDeDados.series[metaAtual.group][nomeBase] = { nome: nomeBase, capa: metaAtual.capa, eps: [] };
-                        }
-                        bancoDeDados.series[metaAtual.group][nomeBase].eps.push({ titulo: metaAtual.name, url: url });
+            lines.forEach(l => {
+                if(l.startsWith('#EXTINF:')) {
+                    const grupo = l.match(/group-title="([^"]*)"/)?.[1] || "Geral";
+                    const logo = l.match(/tvg-logo="([^"]*)"/)?.[1] || "";
+                    const nome = l.split(',')[1]?.trim() || "S/N";
+                    current = { grupo, logo, nome };
+                } else if(l.startsWith('http') && current) {
+                    const g = current.grupo.toLowerCase();
+                    if(g.includes('serie')) {
+                        let base = current.nome.split(/S\d+|T\d+|EP/i)[0].trim();
+                        if(!db.series[current.grupo]) db.series[current.grupo] = {};
+                        if(!db.series[current.grupo][base]) db.series[current.grupo][base] = { n: base, l: current.logo, eps: [] };
+                        db.series[current.grupo][base].eps.push({ n: current.nome, u: l.trim() });
                     } else {
-                        // Filmes
-                        if (!bancoDeDados.filmes[metaAtual.group]) bancoDeDados.filmes[metaAtual.group] = [];
-                        bancoDeDados.filmes[metaAtual.group].push({ nome: metaAtual.name, capa: metaAtual.capa, url: url });
+                        if(!db.filmes[current.grupo]) db.filmes[current.grupo] = [];
+                        db.filmes[current.grupo].push({ n: current.nome, l: current.logo, u: l.trim() });
                     }
-                    metaAtual = null;
+                    current = null;
                 }
             });
         }
 
-        function renderizarInterface() {
-            const containerCat = document.getElementById('lista-categorias');
-            containerCat.innerHTML = "";
-            const grupos = Object.keys(bancoDeDados[modoAtual]);
+        function render() {
+            const pBox = document.getElementById('pills');
+            pBox.innerHTML = "";
+            const cats = Object.keys(db[modo]);
 
-            grupos.forEach((grupo, i) => {
-                const pill = document.createElement('div');
-                pill.className = `category-pill ${i === 0 ? 'active' : ''}`;
-                pill.innerText = grupo;
-                pill.onclick = () => {
-                    document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
-                    pill.classList.add('active');
-                    mostrarGrid(grupo);
+            cats.forEach((c, i) => {
+                const div = document.createElement('div');
+                div.className = `pill ${i === 0 ? 'active' : ''}`;
+                div.innerText = c;
+                div.onclick = () => {
+                    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+                    div.classList.add('active');
+                    fillGrid(c);
                 };
-                containerCat.appendChild(pill);
+                pBox.appendChild(div);
             });
-
-            if (grupos.length > 0) mostrarGrid(grupos[0]);
+            if(cats.length > 0) fillGrid(cats[0]);
         }
 
-        function mostrarGrid(nomeGrupo) {
-            const grid = document.getElementById('grid-principal');
+        function fillGrid(cName) {
+            const grid = document.getElementById('grid');
             grid.innerHTML = "";
-            document.getElementById('titulo-categoria').innerText = nomeGrupo;
-            
-            const itens = modoAtual === 'filmes' ? bancoDeDados.filmes[nomeGrupo] : Object.values(bancoDeDados.series[nomeGrupo]);
+            document.getElementById('cat-title').innerText = cName;
+            const items = modo === 'filmes' ? db.filmes[cName] : Object.values(db.series[cName]);
 
-            itens.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
-                    <img src="${item.capa}" loading="lazy" onerror="this.src='https://via.placeholder.com/200x300?text=S+Capa'">
-                    <div class="card-info"><b>${item.nome}</b></div>
-                `;
-                card.onclick = () => modoAtual === 'series' ? abrirSerie(item) : iniciarPlayer(item.url);
-                grid.appendChild(card);
+            items.forEach(item => {
+                const d = document.createElement('div');
+                d.className = 'card';
+                d.innerHTML = `<img src="${item.l}" onerror="this.src='https://via.placeholder.com/200x300?text=VOD'">`;
+                d.onclick = () => modo === 'series' ? openS(item) : play(item.u);
+                grid.appendChild(d);
             });
         }
 
-        function trocarModo(modo) {
-            modoAtual = modo;
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.getElementById(modo === 'filmes' ? 'nav-f' : 'nav-s').classList.add('active');
-            renderizarInterface();
+        function setModo(m) {
+            modo = m;
+            document.getElementById('tab-f').classList.toggle('active', m === 'filmes');
+            document.getElementById('tab-s').classList.toggle('active', m === 'series');
+            render();
         }
 
-        function abrirSerie(serie) {
-            document.getElementById('modal-nome-serie').innerText = serie.nome;
-            const lista = document.getElementById('lista-episodios');
-            lista.innerHTML = "";
-            
-            serie.eps.forEach(ep => {
+        function openS(s) {
+            document.getElementById('m-title').innerText = s.n;
+            const list = document.getElementById('m-list');
+            list.innerHTML = "";
+            s.eps.forEach(e => {
                 const row = document.createElement('div');
-                row.className = 'ep-row';
-                row.innerHTML = `<span>${ep.titulo}</span> <b style="color:var(--netflix-red)">ASSISTIR</b>`;
-                row.onclick = () => { fecharModal(); iniciarPlayer(ep.url); };
-                lista.appendChild(row);
+                row.className = 'ep-item';
+                row.innerHTML = `<span>${e.n}</span> <b style="color:var(--n-red)">ASSISTIR</b>`;
+                row.onclick = () => { fecharModal(); play(e.u); };
+                list.appendChild(row);
             });
-            document.getElementById('series-modal').style.display = 'block';
+            document.getElementById('modal').style.display = 'block';
         }
 
-        function fecharModal() { document.getElementById('series-modal').style.display = 'none'; }
+        function fecharModal() { document.getElementById('modal').style.display = 'none'; }
 
-        async function iniciarPlayer(url) {
-            const overlay = document.getElementById('player-overlay');
-            const video = document.getElementById('meu-video');
-            overlay.style.display = 'block';
-
-            if (shakaPlayer) await shakaPlayer.destroy();
-            shakaPlayer = new shaka.Player(video);
-            
+        async function play(url) {
+            document.getElementById('player-box').style.display = 'block';
+            const v = document.getElementById('video');
+            if (shakaInstance) await shakaInstance.destroy();
+            shakaInstance = new shaka.Player(v);
             try {
-                await shakaPlayer.load(url);
+                await shakaInstance.load(url);
             } catch (e) {
-                video.src = url; // Fallback para mpegts direto
+                v.src = url;
             }
         }
 
-        function pararVideo() {
-            const video = document.getElementById('meu-video');
-            video.pause();
-            video.src = "";
-            document.getElementById('player-overlay').style.display = 'none';
-        }
-
-        function buscar(termo) {
-            const t = termo.toLowerCase();
-            const grid = document.getElementById('grid-principal');
-            grid.innerHTML = "";
-            
-            Object.values(bancoDeDados[modoAtual]).forEach(grupo => {
-                const lista = modoAtual === 'series' ? Object.values(grupo) : grupo;
-                lista.forEach(item => {
-                    if (item.nome.toLowerCase().includes(t)) {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        card.innerHTML = `<img src="${item.capa}"><div class="card-info"><b>${item.nome}</b></div>`;
-                        card.onclick = () => modoAtual === 'series' ? abrirSerie(item) : iniciarPlayer(item.url);
-                        grid.appendChild(card);
-                    }
-                });
-            });
+        function fecharPlayer() {
+            const v = document.getElementById('video');
+            v.pause();
+            v.src = "";
+            document.getElementById('player-box').style.display = 'none';
         }
 
         shaka.polyfill.installAll();
